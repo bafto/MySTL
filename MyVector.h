@@ -1,6 +1,7 @@
 #pragma once
 
 #include <exception>
+#include <initializer_list>
 
 namespace MySTL
 {
@@ -49,6 +50,18 @@ namespace MySTL
 			donor.data = nullptr;
 		}
 
+		MyVector(std::initializer_list<T> list)
+			:
+			v_size(list.size()),
+			v_capacity(v_size)
+		{
+			data = new T[v_capacity];
+			for (size_t i = 0; i < v_size; i++)
+			{
+				data[i] = *(list.begin() + i);
+			}
+		}
+
 		MyVector<T>& operator=(const MyVector<T>& copy) noexcept
 		{
 			if (&copy != this)
@@ -77,6 +90,19 @@ namespace MySTL
 			return *this;
 		}
 
+		MyVector<T>& operator=(std::initializer_list<T> list)
+		{
+			v_size = list.size();
+			v_capacity = v_size;
+			delete[] data;
+			data = new T[v_capacity];
+			for (size_t i = 0; i < v_size; i++)
+			{
+				data[i] = *(list.begin() + i);
+			}
+			return *this;
+		}
+
 		T& operator[](size_t index)
 		{
 			if (index >= v_size)
@@ -99,6 +125,74 @@ namespace MySTL
 			return v_capacity;
 		}
 
+		T& front()
+		{
+			if (v_size <= 0)
+				throw std::out_of_range("Tried to access element in empty vector");
+			return data[0];
+		}
+		const T& front() const
+		{
+			if (v_size <= 0)
+				throw std::out_of_range("Tried to access element in empty vector");
+			return data[0];
+		}
+		T& back()
+		{
+			if (v_size <= 0)
+				throw std::out_of_range("Tried to access element in empty vector");
+			return data[v_size - 1];
+		}
+		const T& back() const
+		{
+			if (v_size <= 0)
+				throw std::out_of_range("Tried to access element in empty vector");
+			return data[v_size - 1];
+		}
+
+		void swap(MyVector<T>& other)
+		{
+			int tempSize = v_size;
+			int tempCapacity = v_capacity;
+			T* tempData = data;
+
+			v_size = other.v_size;
+			v_capacity = other.v_capacity;
+			data = other.data;
+
+			other.v_size = tempSize;
+			other.v_capacity = tempCapacity;
+			other.data = tempData;
+		}
+
+		void reserve(size_t capacity)
+		{
+			if (v_capacity < capacity)
+			{
+				T* temp = new T[capacity];
+				for (size_t i = 0; i < v_size; i++)
+				{
+					temp[i] = data[i];
+				}
+				delete[] data;
+				data = temp;
+			}
+		}
+		void shrink_to_fit()
+		{
+			if (v_capacity > v_size)
+			{
+				T* temp = new T[v_size];
+				for (size_t i = 0; i < v_size; i++)
+				{
+					temp[i] = data[i];
+				}
+				delete[] data;
+				data = temp;
+				v_capacity = v_size;
+			}
+		}
+
 		void clear()
 		{
 			delete[] data;
@@ -106,5 +200,11 @@ namespace MySTL
 			v_size = 0;
 			v_capacity = 0;
 		}
+		bool empty() const
+		{
+			return v_size == 0;
+		}
+
+		
 	};
 }
