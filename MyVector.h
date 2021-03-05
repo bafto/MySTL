@@ -8,6 +8,11 @@ namespace MySTL
 	template<typename T>
 	class MyVector
 	{
+	public:
+		class Iterator
+		{
+
+		};
 	private:
 		size_t v_size;
 		size_t v_capacity;
@@ -165,6 +170,17 @@ namespace MySTL
 			other.data = tempData;
 		}
 
+		void resize(size_t n, const T& type = T())
+		{
+			if (n < v_size)
+			{
+				v_size = n;
+			}
+			else if (n > v_size)
+			{
+				for(size_t i = v_size; )//finish
+			}
+		}
 		void reserve(size_t capacity)
 		{
 			if (v_capacity < capacity)
@@ -205,6 +221,53 @@ namespace MySTL
 			return v_size == 0;
 		}
 
-		
+		//remake with iterators
+		void insert(size_t position, const T& val)
+		{
+			if (position > v_size)
+				throw std::out_of_range("Tried to insert at an invalid position");
+			if (v_size >= v_capacity)
+			{
+				v_capacity += 4;
+				v_size++;
+				T* temp = new T[v_capacity];
+				for (size_t i = 0; i < position; i++)
+				{
+					temp[i] = data[i];
+				}
+				temp[position] = val;
+				for (size_t i = position; i < v_size; i++)
+				{
+					temp[i + 1] = data[i];
+				}
+				delete[] data;
+				data = temp;
+			}
+			else
+			{
+				for (size_t i = v_size; i > position; i--)
+				{
+					data[i] = data[i - 1];
+				}
+				data[position] = val;
+				v_size++;
+			}
+		}
+		//remake with iterators
+		void insert(size_t position, size_t n, const T& val)
+		{
+			for (size_t i = 0; i < n; i++)
+			{
+				insert(position, val);
+			}
+		}
+		//remake with iterators!!!!!!!!!
+		void insert(size_t position, T* firstIt, T* lastIt)
+		{
+			for (T* it = lastIt - 1; it >= firstIt; --it)
+			{
+				insert(position, *it);
+			}
+		}
 	};
 }
