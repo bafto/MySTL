@@ -9,15 +9,22 @@ int main()
 
 	auto it = vec.begin();
 
-	MySTL::MyVector<int> mvec({ 1, 2, 3, 4, 5 });
+	MySTL::MyVector<std::string> mvec({ "1", "2", "3", "hallo", "5" });
 	MySTL::MyVector<int> mvec2({ 6, 7, 8, 9, 10 });
 
-	mvec.insert(0, &mvec2.front(), &mvec2.back() + 1);
-	
-	for (int i = 0; i < mvec.size(); i++)
+	try
 	{
-		std::cout << mvec[i] << "\n";
-	}
+		for (auto it = mvec.cbegin(); it < mvec.cend(); ++it)
+		{
+			std::cout << *it << " ";
+		}
 
+		std::cout << "\n";
+		std::cout << mvec.cend() - mvec.cbegin();
+	}
+	catch (MySTL::MyVector<int>::exception& e)
+	{
+		std::cerr << "\n" << e.what() << "\n";
+	}
 	return 0;
 }
