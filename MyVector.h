@@ -49,6 +49,26 @@ namespace MySTL
 				exception(copy)
 			{}
 		};
+		class bad_alloc : public exception
+		{
+		public:
+			bad_alloc()
+				:
+				exception("Tried to compare one or two invalid iterators")
+			{}
+			bad_alloc(const char* msg)
+				:
+				exception(msg)
+			{}
+			bad_alloc(const char* msg, int i)
+				:
+				exception(msg, i)
+			{}
+			bad_alloc(const bad_alloc& copy)
+				:
+				exception(copy)
+			{}
+		};
 	public:
 		class iterator
 		{
@@ -75,16 +95,16 @@ namespace MySTL
 					exception(copy)
 				{}
 			};
-		public:
+		protected:
+			MyVector<T>* vec;
+			size_t index;
+		protected:
 			iterator(MyVector<T>* pVec, size_t index)
 				:
 				vec(pVec),
 				index(index)
-			{
-				if (index > vec->v_size)
-					throw out_of_bounds("Tried to construct invalid iterator");
-			}
-
+			{}
+		public:
 			T& operator*() const
 			{
 				return (*vec)[index];
@@ -208,19 +228,16 @@ namespace MySTL
 				else
 					throw bad_iterator_compare("Tried to compare iterators of different vectors");
 			}
-		protected:
-			MyVector<T>* vec;
-			size_t index;
 		};
 		class const_iterator : public iterator
 		{
 			friend class MyVector;
-		public:
+		protected:
 			const_iterator(const MyVector<T>* vec, size_t index)
 				:
 				iterator(const_cast<MyVector<T>*>(vec), index)
 			{}
-
+		public:
 			const T& operator*() const
 			{
 				return iterator::operator*();
@@ -233,6 +250,148 @@ namespace MySTL
 			const T& operator[](size_t index) const
 			{
 				return iterator::operator[](index);
+			}
+		};
+		class reverse_iterator : public iterator
+		{
+		private:
+			friend class MyVector;
+		protected:
+			reverse_iterator(MyVector<T>* vec, size_t index)
+				:
+				iterator(vec, index)
+			{}
+		public:
+			reverse_iterator& operator++()
+			{
+				if (iterator::index-- == -1)
+					throw out_of_bounds("Tried to increment reverse_iterator past the end");
+				return *this;
+			}
+			reverse_iterator operator++(int)
+			{
+				reverse_iterator result(*this);
+				++(*this);
+				return result;
+			}
+			reverse_iterator& operator--()
+			{
+				if (++iterator::index >= iterator::vec->v_size)
+					throw out_of_bounds("Tried to decrement reverse_iterator below the beginning");
+				return *this;
+			}
+			reverse_iterator operator--(int)
+			{
+				reverse_iterator result(*this);
+				--(*this);
+				return result;
+			}
+
+			void operator+=(size_t n)
+			{
+				if ((int)iterator::index - n < -1)
+					throw out_of_bounds("Tried to advance reverse_iterator past the end");
+				iterator::index -= n;
+			}
+			void operator-=(size_t n)
+			{
+				iterator::index += n;
+				if (iterator::index >= iterator::vec->v_size)
+					throw out_of_bounds("Tried to reduce reverse_iterator below the beginning");
+			}
+			reverse_iterator operator+(size_t n) const
+			{
+				reverse_iterator result(*this);
+				result += n;
+				return result;
+			}
+			reverse_iterator operator-(size_t n) const
+			{
+				reverse_iterator result(*this);
+				result -= n;
+				return result;
+			}
+			size_t operator-(iterator other) const
+			{
+				int r = (int)iterator::index - (int)other.index;
+				return r * ((r > 0) - (r < 0)); //get the absolute value;
+			}
+
+			bool operator<(const reverse_iterator& other) const
+			{
+				if (iterator::vec == other.vec)
+				{
+					if (iterator::index == -1 || other.index == -1)
+					{
+						return (iterator::index + 1) > (other.index + 1);
+					}
+					return iterator::index > other.index;
+				}
+				else
+					throw iterator::bad_iterator_compare("Tried to compare reverse_iterators of different vectors");
+			}
+			bool operator>(const reverse_iterator& other) const
+			{
+				if (iterator::vec == other.vec)
+				{
+					if (iterator::index == -1 || other.index == -1)
+					{
+						return (iterator::index + 1) < (other.index + 1);
+					}
+					return iterator::index < other.index;
+				}
+				else
+					throw iterator::bad_iterator_compare("Tried to compare reverse_iterators of different vectors");
+			}
+			bool operator<=(const reverse_iterator& other) const
+			{
+				if (iterator::vec == other.vec)
+				{
+					if (iterator::index == -1 || other.index == -1)
+					{
+						return (iterator::index + 1) >= (other.index + 1);
+					}
+					return iterator::index >= other.index;
+				}
+				else
+					throw iterator::bad_iterator_compare("Tried to compare reverse_iterators of different vectors");
+			}
+			bool operator>=(const reverse_iterator& other) const
+			{
+				if (iterator::vec == other.vec)
+				{
+					if (iterator::index == -1 || other.index == -1)
+					{
+						return (iterator::index + 1) <= (other.index + 1);
+					}
+					return iterator::index <= other.index;
+				}
+				else
+					throw iterator::bad_iterator_compare("Tried to compare reverse_iterators of different vectors");
+			}
+		};
+		class reverse_const_iterator : public reverse_iterator
+		{
+		private:
+			friend class MyVector;
+		protected:
+			reverse_const_iterator(const MyVector<T>* vec, size_t index)
+				:
+				reverse_iterator(const_cast<MyVector<T>*>(vec), index)
+			{}
+		public:
+			const T& operator*() const
+			{
+				return reverse_iterator::operator*();
+			}
+			const T* operator->() const
+			{
+				return reverse_iterator::operator->();
+			}
+
+			const T& operator[](size_t index) const
+			{
+				return reverse_iterator::operator[](index);
 			}
 		};
 	private:
@@ -410,17 +569,11 @@ namespace MySTL
 				else
 				{
 					v_capacity = n + 5;
-					T* temp = new T[v_capacity];
-					for (size_t i = 0; i < v_size; i++)
-					{
-						temp[i] = data[i];
-					}
+					reallocate(v_capacity);
 					for (size_t i = v_size; i < n; i++)
 					{
-						temp[i] = val;
+						data[i] = val;
 					}
-					delete[] data;
-					data = temp;
 				}
 			}
 		}
@@ -428,27 +581,14 @@ namespace MySTL
 		{
 			if (v_capacity < capacity)
 			{
-				T* temp = new T[capacity];
-				for (size_t i = 0; i < v_size; i++)
-				{
-					temp[i] = data[i];
-				}
-				delete[] data;
-				data = temp;
+				reallocate(capacity);
 			}
 		}
 		void shrink_to_fit()
 		{
 			if (v_capacity > v_size)
 			{
-				T* temp = new T[v_size];
-				for (size_t i = 0; i < v_size; i++)
-				{
-					temp[i] = data[i];
-				}
-				delete[] data;
-				data = temp;
-				v_capacity = v_size;
+				reallocate(v_size);
 			}
 		}
 
@@ -460,6 +600,14 @@ namespace MySTL
 		{
 			return const_iterator(this, 0);
 		}
+		reverse_iterator rbegin()
+		{
+			return reverse_iterator(this, v_size - 1);
+		}
+		reverse_const_iterator crbegin()
+		{
+			return reverse_const_iterator(this, v_size - 1);
+		}
 		iterator end()
 		{
 			return iterator(this, v_size);
@@ -467,6 +615,14 @@ namespace MySTL
 		const_iterator cend() const
 		{
 			return const_iterator(this, v_size);
+		}
+		reverse_iterator rend()
+		{
+			return reverse_iterator(this, -1);
+		}
+		reverse_const_iterator crend()
+		{
+			return reverse_const_iterator(this, -1);
 		}
 
 		void clear()
@@ -481,51 +637,60 @@ namespace MySTL
 			return v_size == 0;
 		}
 
-		//remake with iterators
-		void insert(iterator position, const T& val)
+		iterator insert(iterator position, const T& val)
 		{
-			if (v_size >= v_capacity)
+			if (v_capacity <= v_size)
 			{
-				v_capacity += 4;
-				v_size++;
-				T* temp = new T[v_capacity];
-				for (size_t i = 0; i < position; i++)
-				{
-					temp[i] = data[i];
-				}
-				temp[position] = val;
-				for (size_t i = position; i < v_size; i++)
-				{
-					temp[i + 1] = data[i];
-				}
-				delete[] data;
-				data = temp;
+				reallocate(v_capacity + 3);
 			}
-			else
+			v_size++;
+			for (auto it = end() - 1; it > position; --it)
 			{
-				for (size_t i = v_size; i > position; i--)
-				{
-					data[i] = data[i - 1];
-				}
-				data[position] = val;
-				v_size++;
+				*it = *(it - 1);
 			}
+			*position = val;
+			return position;
 		}
-		//remake with iterators
-		void insert(size_t position, size_t n, const T& val)
+		iterator insert(iterator position, size_t n, const T& val)
 		{
 			for (size_t i = 0; i < n; i++)
 			{
 				insert(position, val);
 			}
+			return position;
 		}
-		//remake with iterators!!!!!!!!!
-		void insert(size_t position, T* firstIt, T* lastIt)
+		iterator insert(iterator position, std::initializer_list<T> list)
 		{
-			for (T* it = lastIt - 1; it >= firstIt; --it)
+			for (auto it = list.end() - 1; it > list.begin() - 1; --it)
 			{
 				insert(position, *it);
 			}
+			return position;
+		}
+		template<class InputIt>
+		iterator insert(iterator position, InputIt firstIt, InputIt lastIt) //does not yet work on self
+		{
+			reallocate(v_capacity + (lastIt - firstIt));
+			for (auto it = lastIt - 1; it > firstIt; --it)
+			{
+				insert(position, *it);
+			}
+			insert(position, *firstIt);
+			return position;
+		}
+	private:
+		void reallocate(size_t capacity)
+		{
+			if (v_size > capacity)
+				throw bad_alloc("Internally tried to reallocate to less space then items");
+			T* temp = new T[capacity];
+			for (size_t i = 0; i < v_size; i++)
+			{
+				temp[i] = data[i];
+			}
+			delete[] data;
+			data = temp;
+			v_capacity = capacity;
 		}
 	};
 }
