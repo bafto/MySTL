@@ -7,8 +7,8 @@ int main()
 {
 	try
 	{
-		MySTL::MyVector<int> vec = { 6, 5, 18, 0, 27, 1 };
-		vec.sort(vec.begin() + 2, vec.end());
+		MySTL::MyVector<int> vec = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+		auto vec2 = vec.subVec(vec.begin(), vec.end() - 5);
 		vec.forEach([](int& c) {
 			std::cout << c << " ";
 			});

@@ -440,10 +440,11 @@ namespace MySTL
 		}
 		MyVector(size_t v_size)
 			:
-			v_size(v_size),
+			v_size(0),
 			v_capacity(v_size)
 		{
 			data = new T[v_capacity];
+			insert(begin(), v_size, T());
 		}
 		MyVector(const MyVector<T>& copy) noexcept
 			:
@@ -839,6 +840,14 @@ namespace MySTL
 				lambda(e);
 			}
 		}
+		template<class Iter>
+		void forEach(std::function<void(T&)> lambda, Iter firstIt, Iter lastIt)
+		{
+			for (auto it = firstIt; it < lastIt; ++it)
+			{
+				lambda(*it);
+			}
+		}
 		//bad sort function using bubble sort
 		template<class Iter>
 		void sort(Iter firstIt, Iter lastIt)
@@ -866,6 +875,21 @@ namespace MySTL
 		void rsort()
 		{
 			sort(rbegin(), rend());
+		}
+
+		template<class Iter>
+		MyVector<T> subVec(Iter firstIt, Iter lastIt)
+		{
+			static_assert(std::is_base_of<iterator, Iter>::value, "Iterator must be of type MyVector<T>::iterator");
+			if (firstIt.vec != this || lastIt.vec != this)
+				throw bad_iterator("Iterator must be pointing to this");
+			MyVector<T> mvec;
+			mvec.reserve(lastIt - firstIt);
+			for (auto it = firstIt; it < lastIt; ++it)
+			{
+				mvec.emplace_back(*it);
+			}
+			return mvec;
 		}
 	private:
 		void reallocate(size_t capacity)
