@@ -69,6 +69,26 @@ namespace MySTL
 				exception(copy)
 			{}
 		};
+		class bad_iterator : public exception
+		{
+		public:
+			bad_iterator()
+				:
+				exception("Bad iterator")
+			{}
+			bad_iterator(const char* msg)
+				:
+				exception(msg)
+			{}
+			bad_iterator(const char* msg, int i)
+				:
+				exception(msg, i)
+			{}
+			bad_iterator(const bad_iterator& copy)
+				:
+				exception(copy)
+			{}
+		};
 	public:
 		class iterator
 		{
@@ -510,6 +530,14 @@ namespace MySTL
 		{
 			return v_capacity;
 		}
+		T* getData()
+		{
+			return data;
+		}
+		const T* getData() const
+		{
+			return data;
+		}
 
 		T& front()
 		{
@@ -534,6 +562,15 @@ namespace MySTL
 			if (v_size <= 0)
 				throw out_of_bounds("Tried to access element in empty vector");
 			return data[v_size - 1];
+		}
+
+		T& at(size_t n)
+		{
+			return (*this)[n];
+		}
+		const T& at(size_t n) const
+		{
+			return (*this)[n];
 		}
 
 		void swap(MyVector<T>& other)
@@ -636,8 +673,23 @@ namespace MySTL
 			return v_size == 0;
 		}
 
+		void assign(size_t n, const T& val)
+		{
+			clear();
+			insert(begin(), n, val);
+		}
+
 		iterator insert(iterator position, const T& val)
 		{
+			if (position.vec != this)
+				throw bad_iterator("Tried to pass iterator from different vector");
+			T copy = val;
+			return insert(position, std::move(copy));
+		}
+		iterator insert(iterator position, T&& val)
+		{
+			if (position.vec != this)
+				throw bad_iterator("Tried to pass iterator from different vector");
 			if (v_capacity <= v_size)
 			{
 				reallocate(v_capacity + 3);
@@ -647,7 +699,7 @@ namespace MySTL
 			{
 				*it = *(it - 1);
 			}
-			*position = val;
+			*position = std::move(val);
 			return position;
 		}
 		iterator insert(iterator position, size_t n, const T& val)
@@ -714,6 +766,64 @@ namespace MySTL
 		iterator insert<reverse_const_iterator>(iterator position, reverse_const_iterator firstIt, reverse_const_iterator lastIt)
 		{
 			return insert<reverse_iterator>(position, firstIt, lastIt);
+		}
+
+		iterator emplace(iterator position)
+		{
+			return position;
+		}
+		template<typename arg, typename... args>
+		iterator emplace(iterator position, arg&& val, args&&... vals)
+		{
+			insert(position, std::move(val));
+			emplace(position + 1, vals...);
+			return position;
+		}
+		template<typename... args>
+		T& emplace_back(args&&... vals)
+		{
+			return *emplace(end(), vals...);
+		}
+
+		void push_back(const T& val)
+		{
+			insert(end(), val);
+		}
+		void push_back(T&& val)
+		{
+			insert(end(), std::move(val));
+		}
+
+		iterator erase(iterator position)
+		{
+			if (position == end())
+				throw out_of_bounds("Tried to erase element out of bounds");
+			for (auto it = position, stop = end() - 1; it < stop; ++it)
+			{
+				*it = *(it + 1);
+			}
+			v_size--;
+			return position;
+		}
+		iterator erase(iterator firstIt, iterator lastIt)
+		{
+			if (firstIt < begin() || lastIt >= end())
+				throw out_of_bounds("Tried to pass iterators out of bounds");
+			size_t dist = lastIt - firstIt;
+			for (auto it = lastIt, stop = end(); it < stop; ++it)
+			{
+				*(it - dist) = *it;
+			}
+			v_size -= dist;
+			return firstIt;
+		}
+		void pop_back()
+		{
+			erase(end() - 1);
+		}
+		void pop_front()
+		{
+			erase(begin());
 		}
 	private:
 		void reallocate(size_t capacity)
