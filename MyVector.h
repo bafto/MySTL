@@ -94,6 +94,8 @@ namespace MySTL
 	public:
 		class iterator
 		{
+		public:
+			using value_type = T;
 		private:
 			friend class MyVector;
 
