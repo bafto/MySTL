@@ -628,9 +628,8 @@ namespace MySTL
 		void clear()
 		{
 			delete[] data;
-			data = nullptr;
+			data = new T[v_capacity];
 			v_size = 0;
-			v_capacity = 0;
 		}
 		bool empty() const
 		{
@@ -677,6 +676,44 @@ namespace MySTL
 			}
 			insert(position, *firstIt);
 			return position;
+		}
+		template<>
+		iterator insert<iterator>(iterator position, iterator firstIt, iterator lastIt)
+		{
+			reallocate(v_capacity + (lastIt - firstIt));
+			MyVector<T> temp(*this);
+			iterator pos = temp.begin() + (position - begin());
+			for (auto it = lastIt - 1; it > firstIt; --it)
+			{
+				temp.insert(pos, *it);
+			}
+			temp.insert(pos, *firstIt);
+			*this = temp;
+			return position;
+		}
+		template<>
+		iterator insert<const_iterator>(iterator position, const_iterator firstIt, const_iterator lastIt)
+		{
+			return insert<iterator>(position, firstIt, lastIt);
+		}
+		template<>
+		iterator insert<reverse_iterator>(iterator position, reverse_iterator firstIt, reverse_iterator lastIt)
+		{
+			reallocate(v_capacity + (lastIt - firstIt));
+			MyVector<T> temp(*this);
+			iterator pos = temp.begin() + (position - begin());
+			for (auto it = lastIt - 1; it > firstIt; --it)
+			{
+				temp.insert(pos, *it);
+			}
+			temp.insert(pos, *firstIt);
+			*this = temp;
+			return position;
+		}
+		template<>
+		iterator insert<reverse_const_iterator>(iterator position, reverse_const_iterator firstIt, reverse_const_iterator lastIt)
+		{
+			return insert<reverse_iterator>(position, firstIt, lastIt);
 		}
 	private:
 		void reallocate(size_t capacity)

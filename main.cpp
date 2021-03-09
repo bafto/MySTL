@@ -13,7 +13,7 @@ int main()
 
 	try
 	{
-		std::cout << *mvec.insert(mvec.begin(), mvec.begin(), mvec.end()) << "\n";
+		std::cout << *mvec.insert(mvec.begin(), mvec.cbegin(), mvec.cend()) << "\n";
 		for (auto& e : mvec)
 			std::cout << e << " ";
 	}
