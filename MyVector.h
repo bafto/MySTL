@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <initializer_list>
+#include <functional>
 
 namespace MySTL
 {
@@ -641,7 +642,7 @@ namespace MySTL
 		{
 			return reverse_iterator(this, v_size - 1);
 		}
-		reverse_const_iterator crbegin()
+		reverse_const_iterator crbegin() const
 		{
 			return reverse_const_iterator(this, v_size - 1);
 		}
@@ -657,7 +658,7 @@ namespace MySTL
 		{
 			return reverse_iterator(this, -1);
 		}
-		reverse_const_iterator crend()
+		reverse_const_iterator crend() const
 		{
 			return reverse_const_iterator(this, -1);
 		}
@@ -825,6 +826,15 @@ namespace MySTL
 		{
 			erase(begin());
 		}
+
+		void forEach(std::function<void(T&)> lambda)
+		{
+			for (auto& e : *this)
+			{
+				lambda(e);
+			}
+		}
+
 	private:
 		void reallocate(size_t capacity)
 		{
