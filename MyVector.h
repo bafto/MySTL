@@ -3,6 +3,7 @@
 #include <exception>
 #include <initializer_list>
 #include <functional>
+#include <string>
 
 namespace MySTL
 {
@@ -12,22 +13,22 @@ namespace MySTL
 	public:
 		class exception : public std::exception
 		{
+		private:
+			std::string message;
+			int error_code;
 		public:
 			exception()
 				:
-				std::exception("Vector exception")
+				exception("Vector exception")
 			{}
-			exception(const char* msg)
+			exception(const char* message)
 				:
-				std::exception(msg)
+				exception(message, 0)
 			{}
-			exception(const char* msg, int i)
+			exception(const char* message, int error_code)
 				:
-				std::exception(msg, i)
-			{}
-			exception(const exception& copy) noexcept
-				:
-				std::exception(copy)
+				message{message},
+				error_code{error_code}
 			{}
 		};
 		class out_of_bounds : public exception
