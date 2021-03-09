@@ -3,6 +3,7 @@
 #include <exception>
 #include <initializer_list>
 #include <functional>
+#include <string>
 
 namespace MySTL
 {
@@ -12,22 +13,22 @@ namespace MySTL
 	public:
 		class exception : public std::exception
 		{
+		private:
+			std::string message;
+			int error_code;
 		public:
 			exception()
 				:
-				std::exception("Vector exception")
+				exception("Vector exception")
 			{}
-			exception(const char* msg)
+			exception(const char* message)
 				:
-				std::exception(msg)
+				exception(message, 0)
 			{}
-			exception(const char* msg, int i)
+			exception(const char* message, int error_code)
 				:
-				std::exception(msg, i)
-			{}
-			exception(const exception& copy) noexcept
-				:
-				std::exception(copy)
+				message{message},
+				error_code{error_code}
 			{}
 		};
 		class out_of_bounds : public exception
@@ -93,6 +94,8 @@ namespace MySTL
 	public:
 		class iterator
 		{
+		public:
+			using value_type = T;
 		private:
 			friend class MyVector;
 
@@ -730,8 +733,7 @@ namespace MySTL
 			insert(position, *firstIt);
 			return position;
 		}
-		template<>
-		iterator insert<iterator>(iterator position, iterator firstIt, iterator lastIt)
+		iterator insert(iterator position, iterator firstIt, iterator lastIt)
 		{
 			reallocate(v_capacity + (lastIt - firstIt));
 			MyVector<T> temp(*this);
@@ -744,13 +746,11 @@ namespace MySTL
 			*this = temp;
 			return position;
 		}
-		template<>
-		iterator insert<const_iterator>(iterator position, const_iterator firstIt, const_iterator lastIt)
+		iterator insert(iterator position, const_iterator firstIt, const_iterator lastIt)
 		{
 			return insert<iterator>(position, firstIt, lastIt);
 		}
-		template<>
-		iterator insert<reverse_iterator>(iterator position, reverse_iterator firstIt, reverse_iterator lastIt)
+		iterator insert(iterator position, reverse_iterator firstIt, reverse_iterator lastIt)
 		{
 			reallocate(v_capacity + (lastIt - firstIt));
 			MyVector<T> temp(*this);
@@ -763,8 +763,7 @@ namespace MySTL
 			*this = temp;
 			return position;
 		}
-		template<>
-		iterator insert<reverse_const_iterator>(iterator position, reverse_const_iterator firstIt, reverse_const_iterator lastIt)
+		iterator insert(iterator position, reverse_const_iterator firstIt, reverse_const_iterator lastIt)
 		{
 			return insert<reverse_iterator>(position, firstIt, lastIt);
 		}

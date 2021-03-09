@@ -9,9 +9,9 @@ int main()
 	{
 		MySTL::MyVector<int> vec = { 1, 3, 3, 6, 5 };
 		std::sort(vec.begin(), vec.end());
-		vec.forEach([](int& c) {
-			std::cout << c << " ";
-			});
+		//vec.forEach([](int& c) {
+		//	std::cout << c << " ";
+		//	});
 	}
 	catch (std::exception& e)
 	{
