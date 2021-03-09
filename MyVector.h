@@ -40,7 +40,7 @@ namespace MySTL
 			{}
 			out_of_bounds(const char* msg)
 				:
-				exception(msg)
+				exception(msg, 1)
 			{}
 			out_of_bounds(const char* msg, int i)
 				:
@@ -60,7 +60,7 @@ namespace MySTL
 			{}
 			bad_alloc(const char* msg)
 				:
-				exception(msg)
+				exception(msg, 2)
 			{}
 			bad_alloc(const char* msg, int i)
 				:
@@ -80,7 +80,7 @@ namespace MySTL
 			{}
 			bad_iterator(const char* msg)
 				:
-				exception(msg)
+				exception(msg, 3)
 			{}
 			bad_iterator(const char* msg, int i)
 				:
@@ -92,10 +92,15 @@ namespace MySTL
 			{}
 		};
 	public:
-		class iterator
+		//With the help of Zachariah the Magnificent to make it work for standard algorithms like std::sort()
+		class iterator 
 		{
 		public:
 			using value_type = T;
+			using reference = T&;
+			using pointer = T*;
+			using difference_type = std::ptrdiff_t;
+			using iterator_category = std::random_access_iterator_tag;
 		private:
 			friend class MyVector;
 
@@ -108,7 +113,7 @@ namespace MySTL
 				{}
 				bad_iterator_compare(const char* msg)
 					:
-					exception(msg)
+					exception(msg, 4)
 				{}
 				bad_iterator_compare(const char* msg, int i)
 					:
@@ -129,11 +134,11 @@ namespace MySTL
 				index(index)
 			{}
 		public:
-			T& operator*() const
+			reference operator*() const
 			{
 				return (*vec)[index];
 			}
-			T* operator->() const
+			pointer operator->() const
 			{
 				return &(*vec)[index];
 			}
@@ -193,7 +198,7 @@ namespace MySTL
 				return r * ((r > 0) - (r < 0)); //get the absolute value;
 			}
 			
-			T& operator[](size_t n) const
+			reference operator[](size_t n) const
 			{
 				return (*vec)[index + n];
 			}
@@ -262,16 +267,16 @@ namespace MySTL
 				iterator(const_cast<MyVector<T>*>(vec), index)
 			{}
 		public:
-			const T& operator*() const
+			const iterator::reference operator*() const
 			{
 				return iterator::operator*();
 			}
-			const T* operator->() const
+			const iterator::pointer operator->() const
 			{
 				return iterator::operator->();
 			}
 
-			const T& operator[](size_t index) const
+			const iterator::reference operator[](size_t index) const
 			{
 				return iterator::operator[](index);
 			}
@@ -313,14 +318,14 @@ namespace MySTL
 
 			void operator+=(size_t n)
 			{
-				if ((int)iterator::index - n < -1)
+				if ((((int)iterator::index + 1) - (int)(n + 1)) < -1)
 					throw out_of_bounds("Tried to advance reverse_iterator past the end");
 				iterator::index -= n;
 			}
 			void operator-=(size_t n)
 			{
 				iterator::index += n;
-				if (iterator::index >= iterator::vec->v_size)
+				if (iterator::index >= iterator::vec->v_size && iterator::index != -1)
 					throw out_of_bounds("Tried to reduce reverse_iterator below the beginning");
 			}
 			reverse_iterator operator+(size_t n) const
@@ -404,16 +409,16 @@ namespace MySTL
 				reverse_iterator(const_cast<MyVector<T>*>(vec), index)
 			{}
 		public:
-			const T& operator*() const
+			const iterator::reference operator*() const
 			{
 				return reverse_iterator::operator*();
 			}
-			const T* operator->() const
+			const iterator::pointer operator->() const
 			{
 				return reverse_iterator::operator->();
 			}
 
-			const T& operator[](size_t index) const
+			const iterator::reference operator[](size_t index) const
 			{
 				return reverse_iterator::operator[](index);
 			}
@@ -826,6 +831,7 @@ namespace MySTL
 			erase(begin());
 		}
 
+		//execute the lambda taking each element as parameter
 		void forEach(std::function<void(T&)> lambda)
 		{
 			for (auto& e : *this)
@@ -833,7 +839,34 @@ namespace MySTL
 				lambda(e);
 			}
 		}
-
+		//bad sort function using bubble sort
+		template<class Iter>
+		void sort(Iter firstIt, Iter lastIt)
+		{
+			static_assert(std::is_base_of<iterator, Iter>::value, "Iterator must be of type MyVector<T>::iterator");
+			if (firstIt.vec != this || lastIt.vec != this)
+				throw bad_iterator("Iterator must be pointing to this");
+			for (auto it = firstIt, stop = (lastIt - 1); it < stop; ++it)
+			{
+				for (auto itt = firstIt; itt < (lastIt - (firstIt - it) - 1); ++itt)
+				{
+					if (*itt > *(itt + 1))
+					{
+						T temp = *itt;
+						*itt = *(itt + 1);
+						*(itt + 1) = temp;
+					}
+				}
+			}
+		}
+		void sort()
+		{
+			sort(begin(), end());
+		}
+		void rsort()
+		{
+			sort(rbegin(), rend());
+		}
 	private:
 		void reallocate(size_t capacity)
 		{

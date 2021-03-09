@@ -7,11 +7,11 @@ int main()
 {
 	try
 	{
-		MySTL::MyVector<int> vec = { 1, 3, 3, 6, 5 };
-		std::sort(vec.begin(), vec.end());
-		//vec.forEach([](int& c) {
-		//	std::cout << c << " ";
-		//	});
+		MySTL::MyVector<int> vec = { 6, 5, 18, 0, 27, 1 };
+		vec.sort(vec.begin() + 2, vec.end());
+		vec.forEach([](int& c) {
+			std::cout << c << " ";
+			});
 	}
 	catch (std::exception& e)
 	{
