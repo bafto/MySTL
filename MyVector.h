@@ -731,25 +731,31 @@ namespace MySTL
 		template<class InputIt>
 		iterator insert(iterator position, InputIt firstIt, InputIt lastIt) //does not yet work on self
 		{
-			reallocate(v_capacity + (lastIt - firstIt));
-			for (auto it = lastIt - 1; it > firstIt; --it)
+			if (firstIt != lastIt)
 			{
-				insert(position, *it);
+				reallocate(v_capacity + (lastIt - firstIt));
+				for (auto it = lastIt - 1; it > firstIt; --it)
+				{
+					insert(position, *it);
+				}
+				insert(position, *firstIt);
 			}
-			insert(position, *firstIt);
 			return position;
 		}
 		iterator insert(iterator position, iterator firstIt, iterator lastIt)
 		{
-			reallocate(v_capacity + (lastIt - firstIt));
-			MyVector<T> temp(*this);
-			iterator pos = temp.begin() + (position - begin());
-			for (auto it = lastIt - 1; it > firstIt; --it)
+			if (firstIt != lastIt)
 			{
-				temp.insert(pos, *it);
+				reallocate(v_capacity + (lastIt - firstIt));
+				MyVector<T> temp(*this);
+				iterator pos = temp.begin() + (position - begin());
+				for (auto it = lastIt - 1; it > firstIt; --it)
+				{
+					temp.insert(pos, *it);
+				}
+				temp.insert(pos, *firstIt);
+				*this = temp;
 			}
-			temp.insert(pos, *firstIt);
-			*this = temp;
 			return position;
 		}
 		iterator insert(iterator position, const_iterator firstIt, const_iterator lastIt)
@@ -758,15 +764,18 @@ namespace MySTL
 		}
 		iterator insert(iterator position, reverse_iterator firstIt, reverse_iterator lastIt)
 		{
-			reallocate(v_capacity + (lastIt - firstIt));
-			MyVector<T> temp(*this);
-			iterator pos = temp.begin() + (position - begin());
-			for (auto it = lastIt - 1; it > firstIt; --it)
+			if (firstIt != lastIt)
 			{
-				temp.insert(pos, *it);
+				reallocate(v_capacity + (lastIt - firstIt));
+				MyVector<T> temp(*this);
+				iterator pos = temp.begin() + (position - begin());
+				for (auto it = lastIt - 1; it > firstIt; --it)
+				{
+					temp.insert(pos, *it);
+				}
+				temp.insert(pos, *firstIt);
+				*this = temp;
 			}
-			temp.insert(pos, *firstIt);
-			*this = temp;
 			return position;
 		}
 		iterator insert(iterator position, reverse_const_iterator firstIt, reverse_const_iterator lastIt)
@@ -832,6 +841,10 @@ namespace MySTL
 			erase(begin());
 		}
 
+		/*//////////////////////////////////////////*/
+		/*////Extra Methods (not in std::vector)////*/
+		/*//////////////////////////////////////////*/
+
 		//execute the lambda taking each element as parameter
 		void forEach(std::function<void(T&)> lambda)
 		{
@@ -848,6 +861,7 @@ namespace MySTL
 				lambda(*it);
 			}
 		}
+
 		//bad sort function using bubble sort
 		template<class Iter>
 		void sort(Iter firstIt, Iter lastIt)
@@ -877,6 +891,7 @@ namespace MySTL
 			sort(rbegin(), rend());
 		}
 
+		//get subVec
 		template<class Iter>
 		MyVector<T> subVec(Iter firstIt, Iter lastIt)
 		{
@@ -891,6 +906,69 @@ namespace MySTL
 			}
 			return mvec;
 		}
+
+		//adds two MyVectors together
+		MyVector<T> operator+(const MyVector<T>& other) const
+		{
+			MyVector<T> ret;
+			ret.reserve(v_size + other.v_size);
+			ret.insert(ret.end(), cbegin(), cend());
+			ret.insert(ret.end(), other.cbegin(), other.cend());
+			return ret;
+		}
+
+		//check if the vector contains the element by using the == operator
+		bool contains(const T& val)
+		{
+			for (auto& e : *this)
+			{
+				if (e == val)
+					return true;
+			}
+			return false;
+		}
+
+		//return how often the vector contains an item using the == operator
+		size_t count(const T& val)
+		{
+			size_t ret = 0;
+			for (auto& e : *this)
+			{
+				if (e == val)
+					ret++;
+			}
+			return ret;
+		}
+
+		//split the vector at the first occurence of the element (none of the returned values contains val)
+		std::pair<MyVector<T>, MyVector<T>> split(const T& val)
+		{
+			size_t i = 0;
+			for (; i < v_size; i++)
+			{
+				if ((*this)[i] == val)
+					break;
+			}
+			MyVector<T> vec1;
+			vec1.reserve(i);
+			vec1.insert(vec1.end(), begin(), begin() + i);
+			MyVector<T> vec2;
+			vec2.reserve(v_size - i - 1);
+			vec2.insert(vec2.end(), begin() + (i + 1), end());
+			return { vec1, vec2 };
+		}
+
+		//reverses the element order
+		void reverse()
+		{
+			MyVector<T> temp(*this);
+			size_t i = 0;
+			for (auto it = rbegin(), stop = rend(); it < stop; ++it, i++)
+			{
+				temp[i] = *it;
+			}
+			*this = temp;
+		}
 	private:
 		void reallocate(size_t capacity)
 		{
@@ -899,7 +977,7 @@ namespace MySTL
 			T* temp = new T[capacity];
 			for (size_t i = 0; i < v_size; i++)
 			{
-				temp[i] = data[i];
+				temp[i] = std::move(data[i]);
 			}
 			delete[] data;
 			data = temp;
