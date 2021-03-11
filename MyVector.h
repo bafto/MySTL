@@ -11,11 +11,9 @@ namespace MySTL
 	class MyVector
 	{
 	public:
-		class exception : public std::exception
+		class exception : public std::runtime_error
 		{
 		private:
-			std::string message;
-			int error_code;
 		public:
 			exception()
 				:
@@ -23,12 +21,7 @@ namespace MySTL
 			{}
 			exception(const char* message)
 				:
-				exception(message, 0)
-			{}
-			exception(const char* message, int error_code)
-				:
-				message{message},
-				error_code{error_code}
+				std::runtime_error(message)
 			{}
 		};
 		class out_of_bounds : public exception
@@ -40,15 +33,7 @@ namespace MySTL
 			{}
 			out_of_bounds(const char* msg)
 				:
-				exception(msg, 1)
-			{}
-			out_of_bounds(const char* msg, int i)
-				:
-				exception(msg, i)
-			{}
-			out_of_bounds(const out_of_bounds& copy) noexcept
-				:
-				exception(copy)
+				exception(msg)
 			{}
 		};
 		class bad_alloc : public exception
@@ -60,15 +45,7 @@ namespace MySTL
 			{}
 			bad_alloc(const char* msg)
 				:
-				exception(msg, 2)
-			{}
-			bad_alloc(const char* msg, int i)
-				:
-				exception(msg, i)
-			{}
-			bad_alloc(const bad_alloc& copy)
-				:
-				exception(copy)
+				exception(msg)
 			{}
 		};
 		class bad_iterator : public exception
@@ -80,15 +57,7 @@ namespace MySTL
 			{}
 			bad_iterator(const char* msg)
 				:
-				exception(msg, 3)
-			{}
-			bad_iterator(const char* msg, int i)
-				:
-				exception(msg, i)
-			{}
-			bad_iterator(const bad_iterator& copy)
-				:
-				exception(copy)
+				exception(msg)
 			{}
 		};
 	public:
@@ -113,15 +82,7 @@ namespace MySTL
 				{}
 				bad_iterator_compare(const char* msg)
 					:
-					exception(msg, 4)
-				{}
-				bad_iterator_compare(const char* msg, int i)
-					:
-					exception(msg, i)
-				{}
-				bad_iterator_compare(const bad_iterator_compare& copy)
-					:
-					exception(copy)
+					exception(msg)
 				{}
 			};
 		protected:
@@ -536,6 +497,10 @@ namespace MySTL
 		{
 			return v_size;
 		}
+		size_t maxSize() const
+		{
+			return size_t(-1);
+		}
 		size_t capacity() const
 		{
 			return v_capacity;
@@ -615,8 +580,7 @@ namespace MySTL
 				}
 				else
 				{
-					v_capacity = n + 5;
-					reallocate(v_capacity);
+					reallocate(calculateGrowth(n));
 					for (size_t i = v_size; i < n; i++)
 					{
 						data[i] = val;
@@ -702,12 +666,12 @@ namespace MySTL
 				throw bad_iterator("Tried to pass iterator from different vector");
 			if (v_capacity <= v_size)
 			{
-				reallocate(v_capacity + 3);
+				reallocate(calculateGrowth(v_capacity + 1));
 			}
 			v_size++;
 			for (auto it = end() - 1; it > position; --it)
 			{
-				*it = *(it - 1);
+				*it = std::move(*(it - 1));
 			}
 			*position = std::move(val);
 			return position;
@@ -733,7 +697,7 @@ namespace MySTL
 		{
 			if (firstIt != lastIt)
 			{
-				reallocate(v_capacity + (lastIt - firstIt));
+				reallocate(calculateGrowth(v_capacity + (lastIt - firstIt)));
 				for (auto it = lastIt - 1; it > firstIt; --it)
 				{
 					insert(position, *it);
@@ -746,7 +710,7 @@ namespace MySTL
 		{
 			if (firstIt != lastIt)
 			{
-				reallocate(v_capacity + (lastIt - firstIt));
+				reallocate(calculateGrowth(v_capacity + (lastIt - firstIt)));
 				MyVector<T> temp(*this);
 				iterator pos = temp.begin() + (position - begin());
 				for (auto it = lastIt - 1; it > firstIt; --it)
@@ -766,7 +730,7 @@ namespace MySTL
 		{
 			if (firstIt != lastIt)
 			{
-				reallocate(v_capacity + (lastIt - firstIt));
+				reallocate(calculateGrowth(v_capacity + (lastIt - firstIt)));
 				MyVector<T> temp(*this);
 				iterator pos = temp.begin() + (position - begin());
 				for (auto it = lastIt - 1; it > firstIt; --it)
@@ -815,19 +779,19 @@ namespace MySTL
 				throw out_of_bounds("Tried to erase element out of bounds");
 			for (auto it = position, stop = end() - 1; it < stop; ++it)
 			{
-				*it = *(it + 1);
+				*it = std::move(*(it + 1));
 			}
 			v_size--;
 			return position;
 		}
 		iterator erase(iterator firstIt, iterator lastIt)
 		{
-			if (firstIt < begin() || lastIt >= end())
+			if (firstIt < begin() || lastIt > end())
 				throw out_of_bounds("Tried to pass iterators out of bounds");
 			size_t dist = lastIt - firstIt;
 			for (auto it = lastIt, stop = end(); it < stop; ++it)
 			{
-				*(it - dist) = *it;
+				*(it - dist) = std::move(*it);
 			}
 			v_size -= dist;
 			return firstIt;
@@ -982,6 +946,18 @@ namespace MySTL
 			delete[] data;
 			data = temp;
 			v_capacity = capacity;
+		}
+		size_t calculateGrowth(size_t newCapacity)
+		{
+			if (v_capacity > maxSize() - v_capacity / 2)
+				return maxSize();
+
+			const size_t newSize = v_capacity + v_capacity / 2;
+
+			if (newSize < newCapacity)
+				return newCapacity;
+
+			return newSize;
 		}
 	};
 }
