@@ -87,26 +87,26 @@ namespace MySTL
 			};
 		protected:
 			MyVector<T>* vec;
-			size_t index;
+			pointer Ptr;
 		protected:
-			iterator(MyVector<T>* pVec, size_t index)
+			iterator(MyVector<T>* pVec, pointer Ptr)
 				:
 				vec(pVec),
-				index(index)
+				Ptr(Ptr)
 			{}
 		public:
 			reference operator*() const
 			{
-				return (*vec)[index];
+				return *Ptr;
 			}
 			pointer operator->() const
 			{
-				return &(*vec)[index];
+				return Ptr;
 			}
 
 			iterator& operator++()
 			{
-				if (++index > vec->v_size)
+				if (++Ptr > &vec->data[vec->v_size])
 					throw out_of_bounds("Tried to increment iterator past the end");
 				return *this;
 			}
@@ -118,7 +118,7 @@ namespace MySTL
 			}
 			iterator& operator--()
 			{
-				if (index-- <= 0)
+				if (--Ptr < &vec->data[0])
 					throw out_of_bounds("Tried to decrement iterator below the beginning");
 				return *this;
 			}
@@ -131,15 +131,15 @@ namespace MySTL
 
 			void operator+=(size_t n)
 			{
-				index += n;
-				if (index > vec->v_size)
+				Ptr += n;
+				if (Ptr > &vec->data[vec->v_size])
 					throw out_of_bounds("Tried to advance iterator past the end");
 			}
 			void operator-=(size_t n)
 			{
-				if ((int)index - n < 0)
+				Ptr -= n;
+				if (Ptr < &vec->data[0])
 					throw out_of_bounds("Tried to reduce iterator below the beginning");
-				index -= n;
 			}
 			iterator operator+(size_t n) const
 			{
@@ -153,22 +153,22 @@ namespace MySTL
 				result -= n;
 				return result;
 			}
-			size_t operator-(iterator other) const
+			difference_type operator-(iterator other) const
 			{
-				int r = (int)index - (int)other.index;
-				return r * ((r > 0) - (r < 0)); //get the absolute value;
+				int r = Ptr - other.Ptr;
+				return r * ((r > 0) - (r < 0)); //calculate absolute value
 			}
 			
 			reference operator[](size_t n) const
 			{
-				return (*vec)[index + n];
+				return *(Ptr + n);
 			}
 
 			bool operator<(const iterator& other) const
 			{
 				if (vec == other.vec)
 				{
-					return index < other.index;
+					return Ptr < other.Ptr;
 				}
 				else
 					throw bad_iterator_compare("Tried to compare iterators of different vectors");
@@ -177,7 +177,7 @@ namespace MySTL
 			{
 				if (vec == other.vec)
 				{
-					return index > other.index;
+					return Ptr > other.Ptr;
 				}
 				else
 					throw bad_iterator_compare("Tried to compare iterators of different vectors");
@@ -186,7 +186,7 @@ namespace MySTL
 			{
 				if (vec == other.vec)
 				{
-					return index <= other.index;
+					return Ptr <= other.Ptr;
 				}
 				else
 					throw bad_iterator_compare("Tried to compare iterators of different vectors");
@@ -195,7 +195,7 @@ namespace MySTL
 			{
 				if (vec == other.vec)
 				{
-					return index >= other.index;
+					return Ptr >= other.Ptr;
 				}
 				else
 					throw bad_iterator_compare("Tried to compare iterators of different vectors");
@@ -204,7 +204,7 @@ namespace MySTL
 			{
 				if (vec == other.vec)
 				{
-					return index == other.index;
+					return Ptr == other.Ptr;
 				}
 				else
 					throw bad_iterator_compare("Tried to compare iterators of different vectors");
@@ -213,7 +213,7 @@ namespace MySTL
 			{
 				if (vec == other.vec)
 				{
-					return index != other.index;
+					return Ptr != other.Ptr;
 				}
 				else
 					throw bad_iterator_compare("Tried to compare iterators of different vectors");
@@ -247,14 +247,14 @@ namespace MySTL
 		private:
 			friend class MyVector;
 		protected:
-			reverse_iterator(MyVector<T>* vec, size_t index)
+			reverse_iterator(MyVector<T>* vec, iterator::pointer Ptr)
 				:
-				iterator(vec, index)
+				iterator(vec, Ptr)
 			{}
 		public:
 			reverse_iterator& operator++()
 			{
-				if (iterator::index-- == -1)
+				if (--iterator::Ptr < &iterator::vec->data[-1])
 					throw out_of_bounds("Tried to increment reverse_iterator past the end");
 				return *this;
 			}
@@ -266,7 +266,7 @@ namespace MySTL
 			}
 			reverse_iterator& operator--()
 			{
-				if (++iterator::index >= iterator::vec->v_size)
+				if (++iterator::Ptr >= &iterator::vec->data[iterator::vec->v_size])
 					throw out_of_bounds("Tried to decrement reverse_iterator below the beginning");
 				return *this;
 			}
@@ -279,14 +279,14 @@ namespace MySTL
 
 			void operator+=(size_t n)
 			{
-				if ((((int)iterator::index + 1) - (int)(n + 1)) < -1)
+				iterator::Ptr -= n;
+				if (iterator::Ptr < &iterator::vec->data[-1])
 					throw out_of_bounds("Tried to advance reverse_iterator past the end");
-				iterator::index -= n;
 			}
 			void operator-=(size_t n)
 			{
-				iterator::index += n;
-				if (iterator::index >= iterator::vec->v_size && iterator::index != -1)
+				iterator::Ptr += n;
+				if (iterator::Ptr >= &iterator::vec->data[iterator::vec->v_size])
 					throw out_of_bounds("Tried to reduce reverse_iterator below the beginning");
 			}
 			reverse_iterator operator+(size_t n) const
@@ -301,21 +301,17 @@ namespace MySTL
 				result -= n;
 				return result;
 			}
-			size_t operator-(iterator other) const
+			iterator::difference_type operator-(iterator other) const
 			{
-				int r = (int)iterator::index - (int)other.index;
-				return r * ((r > 0) - (r < 0)); //get the absolute value;
+				int r = iterator::Ptr - other.Ptr;
+				return r * ((r > 0) - (r < 0)); //calculate absolute value
 			}
 
 			bool operator<(const reverse_iterator& other) const
 			{
 				if (iterator::vec == other.vec)
 				{
-					if (iterator::index == -1 || other.index == -1)
-					{
-						return (iterator::index + 1) > (other.index + 1);
-					}
-					return iterator::index > other.index;
+					return iterator::Ptr > other.Ptr;
 				}
 				else
 					throw iterator::bad_iterator_compare("Tried to compare reverse_iterators of different vectors");
@@ -324,11 +320,7 @@ namespace MySTL
 			{
 				if (iterator::vec == other.vec)
 				{
-					if (iterator::index == -1 || other.index == -1)
-					{
-						return (iterator::index + 1) < (other.index + 1);
-					}
-					return iterator::index < other.index;
+					return iterator::Ptr < other.Ptr;
 				}
 				else
 					throw iterator::bad_iterator_compare("Tried to compare reverse_iterators of different vectors");
@@ -337,11 +329,7 @@ namespace MySTL
 			{
 				if (iterator::vec == other.vec)
 				{
-					if (iterator::index == -1 || other.index == -1)
-					{
-						return (iterator::index + 1) >= (other.index + 1);
-					}
-					return iterator::index >= other.index;
+					return iterator::Ptr >= other.Ptr;
 				}
 				else
 					throw iterator::bad_iterator_compare("Tried to compare reverse_iterators of different vectors");
@@ -350,11 +338,7 @@ namespace MySTL
 			{
 				if (iterator::vec == other.vec)
 				{
-					if (iterator::index == -1 || other.index == -1)
-					{
-						return (iterator::index + 1) <= (other.index + 1);
-					}
-					return iterator::index <= other.index;
+					return iterator::Ptr <= other.Ptr;
 				}
 				else
 					throw iterator::bad_iterator_compare("Tried to compare reverse_iterators of different vectors");
@@ -365,9 +349,9 @@ namespace MySTL
 		private:
 			friend class MyVector;
 		protected:
-			reverse_const_iterator(const MyVector<T>* vec, size_t index)
+			reverse_const_iterator(const MyVector<T>* vec, iterator::pointer Ptr)
 				:
-				reverse_iterator(const_cast<MyVector<T>*>(vec), index)
+				reverse_iterator(const_cast<MyVector<T>*>(vec), Ptr)
 			{}
 		public:
 			const iterator::reference operator*() const
@@ -385,6 +369,8 @@ namespace MySTL
 			}
 		};
 	private:
+		friend class iterator;
+
 		size_t v_size;
 		size_t v_capacity;
 		T* data;
@@ -577,6 +563,7 @@ namespace MySTL
 					{
 						data[i] = val;
 					}
+					v_size = n;
 				}
 				else
 				{
@@ -585,6 +572,7 @@ namespace MySTL
 					{
 						data[i] = val;
 					}
+					v_size = n;
 				}
 			}
 		}
@@ -605,35 +593,35 @@ namespace MySTL
 
 		iterator begin()
 		{
-			return iterator(this, 0);
+			return iterator(this, &data[0]);
 		}
 		const_iterator cbegin() const
 		{
-			return const_iterator(this, 0);
+			return const_iterator(this, &data[0]);
 		}
 		reverse_iterator rbegin()
 		{
-			return reverse_iterator(this, v_size - 1);
+			return reverse_iterator(this, &data[v_size - 1]);
 		}
 		reverse_const_iterator crbegin() const
 		{
-			return reverse_const_iterator(this, v_size - 1);
+			return reverse_const_iterator(this, &data[v_size - 1]);
 		}
 		iterator end()
 		{
-			return iterator(this, v_size);
+			return iterator(this, &data[v_size]);
 		}
 		const_iterator cend() const
 		{
-			return const_iterator(this, v_size);
+			return const_iterator(this, &data[v_size]);
 		}
 		reverse_iterator rend()
 		{
-			return reverse_iterator(this, -1);
+			return reverse_iterator(this, &data[-1]);
 		}
 		reverse_const_iterator crend() const
 		{
-			return reverse_const_iterator(this, -1);
+			return reverse_const_iterator(this, &data[-1]);
 		}
 
 		void clear()
@@ -666,21 +654,41 @@ namespace MySTL
 				throw bad_iterator("Tried to pass iterator from different vector");
 			if (v_capacity <= v_size)
 			{
-				reallocate(calculateGrowth(v_capacity + 1));
+				size_t newCapacity = calculateGrowth(v_capacity + 1);
+				T* newData = new T[newCapacity];
+				size_t i = 0;
+				for (; &data[i] != position.Ptr; i++)
+				{
+					newData[i] = std::move(data[i]);
+				}
+				newData[i++] = std::move(val);
+				iterator ret(this, &newData[i - 1]);
+				v_size++;
+				for (; i < v_size; i++)
+				{
+					newData[i] = std::move(data[i - 1]);
+				}
+				delete[] data;
+				data = newData;
+				v_capacity = newCapacity;
+				return ret;
 			}
-			v_size++;
-			for (auto it = end() - 1; it > position; --it)
+			else
 			{
-				*it = std::move(*(it - 1));
+				v_size++;
+				for (auto it = end() - 1; it > position; --it)
+				{
+					*it = std::move(*(it - 1));
+				}
+				*position = std::move(val);
+				return position;
 			}
-			*position = std::move(val);
-			return position;
 		}
 		iterator insert(iterator position, size_t n, const T& val)
 		{
 			for (size_t i = 0; i < n; i++)
 			{
-				insert(position, val);
+				position = insert(position, val);
 			}
 			return position;
 		}
@@ -688,63 +696,40 @@ namespace MySTL
 		{
 			for (auto it = list.end() - 1; it > list.begin() - 1; --it)
 			{
-				insert(position, *it);
+				position = insert(position, *it);
 			}
 			return position;
 		}
 		template<class InputIt>
-		iterator insert(iterator position, InputIt firstIt, InputIt lastIt) //does not yet work on self
+		iterator insert(iterator position, InputIt firstIt, InputIt lastIt) //hope it works
 		{
 			if (firstIt != lastIt)
 			{
-				reallocate(calculateGrowth(v_capacity + (lastIt - firstIt)));
-				for (auto it = lastIt - 1; it > firstIt; --it)
+				MyVector<T> newVec;
+				newVec.reserve(calculateGrowth(v_capacity + (lastIt - firstIt)));
+				newVec.resize(v_size + (lastIt - firstIt));
+				auto it = newVec.begin(), tIt = begin();
+				for (; tIt != position; ++it, ++tIt)
 				{
-					insert(position, *it);
+					*it = *tIt;
 				}
-				insert(position, *firstIt);
+				position = it;
+				for (auto iit = firstIt; iit < lastIt; ++iit, ++it)
+				{
+					*it = *iit;
+				}
+				for (auto stop = end(); tIt != stop; ++it, ++tIt)
+				{
+					*it = *tIt;
+				}
+				*this = std::move(newVec);
+				return position;
 			}
-			return position;
-		}
-		iterator insert(iterator position, iterator firstIt, iterator lastIt)
-		{
-			if (firstIt != lastIt)
+			else
 			{
-				reallocate(calculateGrowth(v_capacity + (lastIt - firstIt)));
-				MyVector<T> temp(*this);
-				iterator pos = temp.begin() + (position - begin());
-				for (auto it = lastIt - 1; it > firstIt; --it)
-				{
-					temp.insert(pos, *it);
-				}
-				temp.insert(pos, *firstIt);
-				*this = temp;
+				position = insert(position, *firstIt);
+				return position;
 			}
-			return position;
-		}
-		iterator insert(iterator position, const_iterator firstIt, const_iterator lastIt)
-		{
-			return insert<iterator>(position, firstIt, lastIt);
-		}
-		iterator insert(iterator position, reverse_iterator firstIt, reverse_iterator lastIt)
-		{
-			if (firstIt != lastIt)
-			{
-				reallocate(calculateGrowth(v_capacity + (lastIt - firstIt)));
-				MyVector<T> temp(*this);
-				iterator pos = temp.begin() + (position - begin());
-				for (auto it = lastIt - 1; it > firstIt; --it)
-				{
-					temp.insert(pos, *it);
-				}
-				temp.insert(pos, *firstIt);
-				*this = temp;
-			}
-			return position;
-		}
-		iterator insert(iterator position, reverse_const_iterator firstIt, reverse_const_iterator lastIt)
-		{
-			return insert<reverse_iterator>(position, firstIt, lastIt);
 		}
 
 		iterator emplace(iterator position)
