@@ -155,7 +155,8 @@ namespace MySTL
 			}
 			difference_type operator-(iterator other) const
 			{
-				return Ptr - other.Ptr;
+				int r = Ptr - other.Ptr;
+				return r * ((r > 0) - (r < 0)); //calculate absolute value
 			}
 			
 			reference operator[](size_t n) const
@@ -302,7 +303,8 @@ namespace MySTL
 			}
 			iterator::difference_type operator-(iterator other) const
 			{
-				return iterator::Ptr - other.Ptr;
+				int r = iterator::Ptr - other.Ptr;
+				return r * ((r > 0) - (r < 0)); //calculate absolute value
 			}
 
 			bool operator<(const reverse_iterator& other) const
@@ -561,6 +563,7 @@ namespace MySTL
 					{
 						data[i] = val;
 					}
+					v_size = n;
 				}
 				else
 				{
@@ -569,6 +572,7 @@ namespace MySTL
 					{
 						data[i] = val;
 					}
+					v_size = n;
 				}
 			}
 		}
@@ -650,21 +654,41 @@ namespace MySTL
 				throw bad_iterator("Tried to pass iterator from different vector");
 			if (v_capacity <= v_size)
 			{
-				reallocate(calculateGrowth(v_capacity + 1));
+				size_t newCapacity = calculateGrowth(v_capacity + 1);
+				T* newData = new T[newCapacity];
+				size_t i = 0;
+				for (; &data[i] != position.Ptr; i++)
+				{
+					newData[i] = std::move(data[i]);
+				}
+				newData[i++] = std::move(val);
+				iterator ret(this, &newData[i - 1]);
+				v_size++;
+				for (; i < v_size; i++)
+				{
+					newData[i] = std::move(data[i - 1]);
+				}
+				delete[] data;
+				data = newData;
+				v_capacity = newCapacity;
+				return ret;
 			}
-			v_size++;
-			for (auto it = end() - 1; it > position; --it)
+			else
 			{
-				*it = std::move(*(it - 1));
+				v_size++;
+				for (auto it = end() - 1; it > position; --it)
+				{
+					*it = std::move(*(it - 1));
+				}
+				*position = std::move(val);
+				return position;
 			}
-			*position = std::move(val);
-			return position;
 		}
 		iterator insert(iterator position, size_t n, const T& val)
 		{
 			for (size_t i = 0; i < n; i++)
 			{
-				insert(position, val);
+				position = insert(position, val);
 			}
 			return position;
 		}
@@ -672,63 +696,40 @@ namespace MySTL
 		{
 			for (auto it = list.end() - 1; it > list.begin() - 1; --it)
 			{
-				insert(position, *it);
+				position = insert(position, *it);
 			}
 			return position;
 		}
 		template<class InputIt>
-		iterator insert(iterator position, InputIt firstIt, InputIt lastIt) //does not yet work on self
+		iterator insert(iterator position, InputIt firstIt, InputIt lastIt) //hope it works
 		{
 			if (firstIt != lastIt)
 			{
-				reallocate(calculateGrowth(v_capacity + (lastIt - firstIt)));
-				for (auto it = lastIt - 1; it > firstIt; --it)
+				MyVector<T> newVec;
+				newVec.reserve(calculateGrowth(v_capacity + (lastIt - firstIt)));
+				newVec.resize(v_size + (lastIt - firstIt));
+				auto it = newVec.begin(), tIt = begin();
+				for (; tIt != position; ++it, ++tIt)
 				{
-					insert(position, *it);
+					*it = *tIt;
 				}
-				insert(position, *firstIt);
+				position = it;
+				for (auto iit = firstIt; iit < lastIt; ++iit, ++it)
+				{
+					*it = *iit;
+				}
+				for (auto stop = end(); tIt != stop; ++it, ++tIt)
+				{
+					*it = *tIt;
+				}
+				*this = std::move(newVec);
+				return position;
 			}
-			return position;
-		}
-		iterator insert(iterator position, iterator firstIt, iterator lastIt)
-		{
-			if (firstIt != lastIt)
+			else
 			{
-				reallocate(calculateGrowth(v_capacity + (lastIt - firstIt)));
-				MyVector<T> temp(*this);
-				iterator pos = temp.begin() + (position - begin());
-				for (auto it = lastIt - 1; it > firstIt; --it)
-				{
-					temp.insert(pos, *it);
-				}
-				temp.insert(pos, *firstIt);
-				*this = temp;
+				position = insert(position, *firstIt);
+				return position;
 			}
-			return position;
-		}
-		iterator insert(iterator position, const_iterator firstIt, const_iterator lastIt)
-		{
-			return insert<iterator>(position, firstIt, lastIt);
-		}
-		iterator insert(iterator position, reverse_iterator firstIt, reverse_iterator lastIt)
-		{
-			if (firstIt != lastIt)
-			{
-				reallocate(calculateGrowth(v_capacity + (lastIt - firstIt)));
-				MyVector<T> temp(*this);
-				iterator pos = temp.begin() + (position - begin());
-				for (auto it = lastIt - 1; it > firstIt; --it)
-				{
-					temp.insert(pos, *it);
-				}
-				temp.insert(pos, *firstIt);
-				*this = temp;
-			}
-			return position;
-		}
-		iterator insert(iterator position, reverse_const_iterator firstIt, reverse_const_iterator lastIt)
-		{
-			return insert<reverse_iterator>(position, firstIt, lastIt);
 		}
 
 		iterator emplace(iterator position)
