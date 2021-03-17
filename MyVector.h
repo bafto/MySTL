@@ -711,7 +711,7 @@ namespace MySTL
 				auto it = newVec.begin(), tIt = begin();
 				for (; tIt != position; ++it, ++tIt)
 				{
-					*it = *tIt;
+					*it = std::move(*tIt);
 				}
 				position = it;
 				for (auto iit = firstIt; iit < lastIt; ++iit, ++it)
@@ -720,7 +720,7 @@ namespace MySTL
 				}
 				for (auto stop = end(); tIt != stop; ++it, ++tIt)
 				{
-					*it = *tIt;
+					*it = std::move(*tIt);
 				}
 				*this = std::move(newVec);
 				return position;
@@ -916,7 +916,7 @@ namespace MySTL
 			{
 				temp[i] = *it;
 			}
-			*this = temp;
+			*this = std::move(temp);
 		}
 	private:
 		void reallocate(size_t capacity)

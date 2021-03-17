@@ -12,7 +12,6 @@ int main()
 		MySTL::MyVector<int> vec = { 1, 2, 3, 4, 5 };
 		MySTL::MyVector<int> vec2 = { 1, 2, 3, 4, 5 };
 		std::cout << *vec.insert(vec.end(), vec2.begin(), vec2.end()) << "\n";
-		vec.erase(vec.rbegin() + 2);
 		for (auto& e : vec)
 			std::cout << e << " ";
 	}
