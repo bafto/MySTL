@@ -1,18 +1,47 @@
 #include <vector>
+#include <forward_list>
 #include <iostream>
 #include <algorithm>
 #include "MyVector.h"
+#include "MyForwardList.h"
+
+MySTL::MyForwardList<int> l({ 69, 5, 2, 6, 2 });
+MySTL::MyForwardList<int> l2 = { 2, 2, 3 };
+std::forward_list<int> li = { 1, 2 };
+
+void stdtest()
+{
+	for (int j = 0; j < 1000; j++)
+	{
+		for (int i = 0; i < 100; i++)
+		{
+			li.insert_after(li.before_begin(), i);
+		}
+		li.clear();
+	}
+}
+
+void test()
+{
+
+	for (int j = 0; j < 1000; j++)
+	{
+		for (int i = 0; i < 100; i++)
+		{
+			l2.insert_after(l2.before_begin(), i);
+		}
+		l2.clear();
+	}
+}
 
 int main()
 {
 	try
 	{
-		std::vector<int> svec = { 6, 7, 8, 9, 10 };
-
-		MySTL::MyVector<int> vec = { 1, 2, 3, 4, 5 };
-		MySTL::MyVector<int> vec2 = { 1, 2, 3, 4, 5 };
-		std::cout << *vec.insert(vec.end(), vec2.begin(), vec2.end()) << "\n";
-		for (auto& e : vec)
+		li.
+		stdtest();
+		test();
+		for (auto& e : l2)
 			std::cout << e << " ";
 	}
 	catch (std::exception& e)

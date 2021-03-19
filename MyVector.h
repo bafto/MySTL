@@ -3,7 +3,6 @@
 #include <exception>
 #include <initializer_list>
 #include <functional>
-#include <string>
 
 namespace MySTL
 {
@@ -385,13 +384,13 @@ namespace MySTL
 		{
 			delete[] data;
 		}
-		MyVector(size_t v_size)
+		MyVector(size_t v_size, const T& val = T())
 			:
 			v_size(0),
 			v_capacity(v_size)
 		{
 			data = new T[v_capacity];
-			insert(begin(), v_size, T());
+			insert(begin(), v_size, val);
 		}
 		MyVector(const MyVector<T>& copy) noexcept
 			:
@@ -440,7 +439,7 @@ namespace MySTL
 			}
 			return *this;
 		}
-		MyVector<T>& operator=(MyVector<T>&& donor) noexcept
+		MyVector<T>& operator=(MyVector<T>&& donor)  noexcept
 		{
 			if (&donor != this)
 			{
