@@ -1,6 +1,8 @@
 #pragma once
 
+#include <exception>
 #include <initializer_list>
+#include <functional>
 
 namespace MySTL
 {
@@ -446,6 +448,37 @@ namespace MySTL
 			for (auto& e : *this)
 				newList.emplace_front(std::move(e));
 			*this = newList;
+		}
+		//bad bubble sort
+		void sort()
+		{
+			for (auto it = begin(), stop = end(); it != stop; ++it)
+			{
+				for (auto itt = begin(), jtt = ++begin(); jtt != stop; ++itt, ++jtt)
+				{
+					if (*itt > *jtt)
+					{
+						T temp = *itt;
+						*itt = *jtt;
+						*jtt = temp;
+					}
+				}
+			}
+		}
+		void sort(std::function<bool(const T&, const T&)> Pred)
+		{
+			for (auto it = begin(), stop = end(); it != stop; ++it)
+			{
+				for (auto itt = begin(), jtt = ++begin(); jtt != stop; ++itt, ++jtt)
+				{
+					if (Pred(*itt, *jtt))
+					{
+						T temp = *itt;
+						*itt = *jtt;
+						*jtt = temp;
+					}
+				}
+			}
 		}
 	};
 }

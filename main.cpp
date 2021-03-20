@@ -6,7 +6,7 @@
 #include "MyForwardList.h"
 
 MySTL::MyForwardList<int> l = { 7, 8, 9, 10 };
-MySTL::MyForwardList<int> l2 = { 0, 1, 2, 3, 4, 5 };
+MySTL::MyForwardList<int> l2 = { 25, 3, 23, 100, 29, 8 };
 std::forward_list<int> li = { 7, 5, 6, 2, 38, 22, 34 };
 std::forward_list<int> li2 = { 5, 6,7, 2, 3, 2, 7, 22, 1, 33 };
 
@@ -32,7 +32,7 @@ int main()
 {
 	try
 	{
-		
+		l2.sort([](int i, int j) {return i < j; });
 		for (auto& e : l2)
 			std::cout << e << " ";
 	}
