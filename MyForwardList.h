@@ -198,24 +198,33 @@ namespace MySTL
 
 		MyForwardList<T>& operator=(const MyForwardList<T>& copy)
 		{
-			delete head;
-
-			tail = new Node(nullptr);
-			head = new Node(tail);
-			iterator mIt = before_begin();
-			for (auto it = copy.cbegin(), stop = copy.cend(); it != stop; ++it, ++mIt)
+			if (&copy != this)
 			{
-				mIt.node->next = new Node(tail, *it);
+				delete head;
+
+				tail = new Node(nullptr);
+				head = new Node(tail);
+				iterator mIt = before_begin();
+				for (auto it = copy.cbegin(), stop = copy.cend(); it != stop; ++it, ++mIt)
+				{
+					mIt.node->next = new Node(tail, *it);
+				}
 			}
+
+			return *this;
 		}
 		MyForwardList<T>& operator=(MyForwardList<T>&& donor) noexcept
 		{
-			delete head;
+			if (&donor != this)
+			{
+				delete head;
 
-			head = std::move(donor.head);
-			tail = std::move(donor.tail);
-			donor.head = nullptr;
-			donor.tail = nullptr;
+				head = std::move(donor.head);
+				tail = std::move(donor.tail);
+				donor.head = nullptr;
+				donor.tail = nullptr;
+			}
+			return *this;
 		}
 
 		MyForwardList<T>& operator=(std::initializer_list<T> list)
@@ -229,6 +238,58 @@ namespace MySTL
 			{
 				mIt.node->next = new Node(tail, *it);
 			}
+			
+			return *this;
+		}
+
+		void assign(std::initializer_list<T> list)
+		{
+			*this = list;
+		}
+		void assign(size_t size, const T& val)
+		{
+			clear();
+			for (size_t i = 0; i < size; i++)
+			{
+				push_front(val);
+			}
+		}
+		template<class Iter>
+		void assign(Iter firstIt, Iter lastIt)
+		{
+			clear();
+			for (auto it = firstIt; it != lastIt; ++it)
+			{
+				push_front(*it);
+			}
+		}
+
+		void resize(size_t n, const T& val = T())
+		{
+			if (n == 0)
+			{
+				clear();
+				return;
+			}
+			size_t i = 1;
+			iterator it = begin();
+			for (; i < n; ++it, i++)
+			{
+				if (it.node->next == tail)
+					break;
+			}
+			if (i == n)
+			{
+				erase_after(it, end());
+				return;
+			}
+			else if (it.node->next == tail)
+			{
+				for (; i < n; i++)
+				{
+					it = insert_after(it, val);
+				}
+			}
 		}
 
 		size_t max_size() const
@@ -240,6 +301,15 @@ namespace MySTL
 			return head->next == tail;
 		}
 
+		T& front()
+		{
+			return head->next->data;
+		}
+		const T& front() const
+		{
+			return head->next->data;
+		}
+
 		void clear()
 		{
 			delete head;
@@ -248,7 +318,7 @@ namespace MySTL
 		}
 		void swap(MyForwardList<T>& other)
 		{
-			Node* tempHead = head, tempTail = tail;
+			Node* tempHead = head, *tempTail = tail;
 			
 			head = other.head;
 			tail = other.tail;
@@ -288,6 +358,94 @@ namespace MySTL
 				throw out_of_bounds("Tried to insert after the end");
 			position.node->next = new Node(position.node->next, val);
 			return ++position;
+		}
+		iterator insert_after(iterator position, T&& val)
+		{
+			if (position.node == tail)
+				throw out_of_bounds("Tried to insert after the end");
+			position.node->next = new Node(position.node->next, std::move(val));
+			return ++position;
+		}
+		iterator insert_after(iterator position, size_t size, const T& val)
+		{
+			for (size_t i = 0; i < size; i++)
+			{
+				insert_after(position, val);
+			}
+			return ++position;
+		}
+		iterator insert_after(iterator position, std::initializer_list<T> list)
+		{
+			for (auto it = list.begin(), stop = list.end(); it != stop; ++it)
+			{
+				position = insert_after(position, *it);
+			}
+			return position;
+		}
+		template<class Iter>
+		iterator insert_after(iterator position, Iter firstIt, Iter lastIt)
+		{
+			for (auto it = firstIt, stop = lastIt; it != stop; ++it)
+			{
+				position = insert_after(position, *it);
+			}
+			return position;
+		}
+
+		iterator emplace_after(iterator position, T&& val)
+		{
+			insert_after(position, val);
+		}
+		void emplace_front(T&& val)
+		{
+			head->next = new Node(head->next, std::move(val));
+		}
+
+		void push_front(const T& val)
+		{
+			head->next = new Node(head->next, val);
+		}
+		void push_front(T&& val)
+		{
+			emplace_front(std::move(val));
+		}
+
+		void pop_front()
+		{
+			erase_after(before_begin());
+		}
+
+		iterator erase_after(iterator position)
+		{
+			Node* toErase = position.node->next;
+			if (toErase == nullptr)
+				throw out_of_bounds("Tried to delete past the end of the list");
+			position.node->next = toErase->next;
+			toErase->next = nullptr;
+			delete toErase;
+			return ++position;
+		}
+		iterator erase_after(iterator firstIt, iterator lastIt)
+		{
+			iterator test = firstIt;
+			if (++test == lastIt)
+				return lastIt;
+			Node* moveNode = firstIt.node;
+			iterator it = firstIt;
+			for (auto next = ++firstIt; next != lastIt; ++it, ++next)
+			{}
+			it.node->next = nullptr;
+			delete firstIt.node;
+			moveNode->next = lastIt.node;
+			return iterator(this, moveNode);
+		}
+
+		void reverse()
+		{
+			MyForwardList<T> newList;
+			for (auto& e : *this)
+				newList.emplace_front(std::move(e));
+			*this = newList;
 		}
 	};
 }

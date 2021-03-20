@@ -801,8 +801,7 @@ namespace MySTL
 				lambda(e);
 			}
 		}
-		template<class Iter>
-		void forEach(std::function<void(T&)> lambda, Iter firstIt, Iter lastIt)
+		void forEach(std::function<void(T&)> lambda, iterator firstIt, iterator lastIt)
 		{
 			for (auto it = firstIt; it < lastIt; ++it)
 			{
