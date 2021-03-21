@@ -801,7 +801,8 @@ namespace MySTL
 				lambda(e);
 			}
 		}
-		void forEach(std::function<void(T&)> lambda, iterator firstIt, iterator lastIt)
+		template<class Iter>
+		void forEach(std::function<void(T&)> lambda, Iter firstIt, Iter lastIt)
 		{
 			for (auto it = firstIt; it < lastIt; ++it)
 			{
@@ -829,6 +830,25 @@ namespace MySTL
 				}
 			}
 		}
+		template<class Iter>
+		void sort(Iter firstIt, Iter lastIt, std::function<bool(const T&, const T&)> Comp)
+		{
+			static_assert(std::is_base_of<iterator, Iter>::value, "Iterator must be of type MyVector<T>::iterator");
+			if (firstIt.vec != this || lastIt.vec != this)
+				throw bad_iterator("Iterator must be pointing to this");
+			for (auto it = firstIt, stop = (lastIt - 1); it < stop; ++it)
+			{
+				for (auto itt = firstIt; itt < (lastIt - (firstIt - it) - 1); ++itt)
+				{
+					if (Pred(*itt, *(itt + 1)))
+					{
+						T temp = *itt;
+						*itt = *(itt + 1);
+						*(itt + 1) = temp;
+					}
+				}
+			}
+		}
 		void sort()
 		{
 			sort(begin(), end());
@@ -836,6 +856,10 @@ namespace MySTL
 		void rsort()
 		{
 			sort(rbegin(), rend());
+		}
+		void sort(std::function<bool(const T&, const T&)> Comp)
+		{
+			sort(begin(), end(), Comp);
 		}
 
 		//get subVec

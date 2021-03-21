@@ -40,15 +40,11 @@ namespace MySTL
 		{
 			T data;
 			Node* next;
-			Node(Node* next = nullptr, const T& data = T())
+			Node(Node* next, const T& data = T())
 				:
 				next(next),
 				data(data)
 			{}
-			~Node()
-			{
-				delete next;
-			}
 		};
 	public:
 		class iterator
@@ -147,14 +143,14 @@ namespace MySTL
 	private:
 		friend class iterator;
 
-		Node* head; //one before the first element
-		Node* tail; //one after the last element
+		Node* head; //one element before the actual beginning
+		Node* tail; //one element after the actual end
 	public:
 		MyForwardList()
-		{
-			tail = new Node(nullptr);
-			head = new Node(tail);
-		}
+			:
+			tail(new Node(nullptr)),
+			head(new Node(tail))
+		{}
 		MyForwardList(const MyForwardList<T>& copy)
 		{
 			tail = new Node(nullptr);
@@ -174,7 +170,7 @@ namespace MySTL
 		}
 		~MyForwardList()
 		{
-			delete head;
+			_safeDeleteAllChildren(head);
 		}
 
 		MyForwardList(std::initializer_list<T> list)
@@ -202,7 +198,7 @@ namespace MySTL
 		{
 			if (&copy != this)
 			{
-				delete head;
+				_safeDeleteAllChildren(head);
 
 				tail = new Node(nullptr);
 				head = new Node(tail);
@@ -219,7 +215,7 @@ namespace MySTL
 		{
 			if (&donor != this)
 			{
-				delete head;
+				_safeDeleteAllChildren(head);
 
 				head = std::move(donor.head);
 				tail = std::move(donor.tail);
@@ -231,7 +227,7 @@ namespace MySTL
 
 		MyForwardList<T>& operator=(std::initializer_list<T> list)
 		{
-			delete head;
+			_safeDeleteAllChildren(head);
 
 			tail = new Node(nullptr);
 			head = new Node(tail);
@@ -314,7 +310,7 @@ namespace MySTL
 
 		void clear()
 		{
-			delete head;
+			_safeDeleteAllChildren(head);
 			tail = new Node(nullptr);
 			head = new Node(tail);
 		}
@@ -419,12 +415,9 @@ namespace MySTL
 
 		iterator erase_after(iterator position)
 		{
-			Node* toErase = position.node->next;
-			if (toErase == nullptr)
+			if (position.node->next == nullptr)
 				throw out_of_bounds("Tried to delete past the end of the list");
-			position.node->next = toErase->next;
-			toErase->next = nullptr;
-			delete toErase;
+			position.node->next = _safeDelete(position.node->next);
 			return ++position;
 		}
 		iterator erase_after(iterator firstIt, iterator lastIt)
@@ -437,11 +430,12 @@ namespace MySTL
 			for (auto next = ++firstIt; next != lastIt; ++it, ++next)
 			{}
 			it.node->next = nullptr;
-			delete firstIt.node;
+			_safeDeleteAllChildren(firstIt.node);
 			moveNode->next = lastIt.node;
 			return iterator(this, moveNode);
 		}
 
+		//reverse the order
 		void reverse()
 		{
 			MyForwardList<T> newList;
@@ -465,13 +459,13 @@ namespace MySTL
 				}
 			}
 		}
-		void sort(std::function<bool(const T&, const T&)> Pred)
+		void sort(std::function<bool(const T&, const T&)> Comp)
 		{
 			for (auto it = begin(), stop = end(); it != stop; ++it)
 			{
 				for (auto itt = begin(), jtt = ++begin(); jtt != stop; ++itt, ++jtt)
 				{
-					if (Pred(*itt, *jtt))
+					if (!Comp(*itt, *jtt))
 					{
 						T temp = *itt;
 						*itt = *jtt;
@@ -479,6 +473,180 @@ namespace MySTL
 					}
 				}
 			}
+		}
+		//mega big brain algorithm only partly from me
+		void merge(MyForwardList<T>& fwdlst)
+		{
+			if (empty() && !fwdlst.empty())
+			{
+				head = fwdlst.head;
+				tail = fwdlst.tail;
+				fwdlst.tail = new Node(nullptr);
+				fwdlst.head->next = fwdlst.tail;
+				return;
+			}
+			else if (fwdlst.empty())
+				return;
+
+			sort();
+			fwdlst.sort();
+
+			Node* mergedHead = nullptr;
+			Node* head1 = head->next, * head2 = fwdlst.head->next;
+			if (head1->data <= head2->data)
+			{
+				mergedHead = head1;
+				head1->next = head1->next;
+			}
+			else
+			{
+				mergedHead = head2;
+				head2 = head2->next;
+			}
+
+			Node* mergedTail = mergedHead;
+
+			while (head1 != tail && head2 != fwdlst.tail)
+			{
+				Node* temp = nullptr;
+				if (head1->data <= head2->data)
+				{
+					temp = head1;
+					head1 = head1->next;
+				}
+				else
+				{
+					temp = head2;
+					head2 = head2->next;
+				}
+				mergedTail->next = temp;
+				mergedTail = temp;
+			}
+
+			if (head1 != tail) {
+				mergedTail->next = head1;
+			}
+			else if (head2 != fwdlst.tail) {
+				mergedTail->next = head2;
+			}
+
+			head->next = mergedHead;
+			fwdlst.head->next = fwdlst.tail;
+		}
+		void merge(MyForwardList<T>&& fwdlst)
+		{
+			merge(fwdlst);
+		}
+		void merge(MyForwardList<T>& fwdlst, std::function<bool(const T&, const T&)> Comp)
+		{
+			if (empty() && !fwdlst.empty())
+			{
+				head = fwdlst.head;
+				tail = fwdlst.tail;
+				fwdlst.tail = new Node(nullptr);
+				fwdlst.head->next = fwdlst.tail;
+				return;
+			}
+			else if (fwdlst.empty())
+				return;
+
+			sort(Comp);
+			fwdlst.sort(Comp);
+
+			Node* mergedHead = nullptr;
+			Node* head1 = head->next, * head2 = fwdlst.head->next;
+			if (Comp(head1->data, head2->data))
+			{
+				mergedHead = head1;
+				head1->next = head1->next;
+			}
+			else
+			{
+				mergedHead = head2;
+				head2 = head2->next;
+			}
+
+			Node* mergedTail = mergedHead;
+
+			while (head1 != tail && head2 != fwdlst.tail)
+			{
+				Node* temp = nullptr;
+				if (Comp(head1->data, head2->data))
+				{
+					temp = head1;
+					head1 = head1->next;
+				}
+				else
+				{
+					temp = head2;
+					head2 = head2->next;
+				}
+				mergedTail->next = temp;
+				mergedTail = temp;
+			}
+
+			if (head1 != tail) {
+				mergedTail->next = head1;
+			}
+			else if (head2 != fwdlst.tail) {
+				mergedTail->next = head2;
+			}
+
+			head->next = mergedHead;
+			fwdlst.head->next = fwdlst.tail;
+		}
+		void merge(MyForwardList<T>&& fwdlst, std::function<bool(const T&, const T&)> Comp)
+		{
+			merge(fwdlst, Comp);
+		}
+		//remove specific values
+		void remove(const T& val)
+		{
+			for (auto it = before_begin(), stop = end(); it.node->next != stop.node;)
+			{
+				Node* node = it.node, *next = it.node->next;
+				if (next->data == val)
+					node->next = _safeDelete(next);
+				else
+					++it;
+			}
+		}
+		void remove_if(std::function<bool(const T&)> Comp)
+		{
+			for (auto it = before_begin(), stop = end(); it.node->next != stop.node;)
+			{
+				Node* node = it.node, * next = it.node->next;
+				if (Comp(next->data))
+					node->next = _safeDelete(next);
+				else
+					++it;
+			}
+		}
+		//why is this called splice_after? uh, nvm
+		void splice_after(iterator position, MyForwardList<T>& fwdlst)
+		{
+
+		}
+		void splice_after(iterator position, MyForwardList<T>&& fwdlst)
+		{
+			splice_after(position, fwdlst);
+		}
+	private:
+		Node* _safeDelete(Node* node)
+		{
+			Node* next = node->next;
+			delete node;
+			return next;
+		}
+		void _safeDeleteAllChildren(Node* node)
+		{
+			Node* current = node;
+			do
+			{
+				Node* next = current->next;
+				delete current;
+				current = next;
+			} while (current != nullptr);
 		}
 	};
 }
