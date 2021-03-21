@@ -5,10 +5,10 @@
 #include "MyVector.h"
 #include "MyForwardList.h"
 
-MySTL::MyForwardList<int> l = { 1, 2, 7, 5, 1, 1, 23, 15, 69, 1 };
+MySTL::MyForwardList<int> l = { 1, 2, 7, 5, 23, 15, 69, 1 };
 MySTL::MyForwardList<int> l2 = { 3, 1, 18, 9 };
 std::forward_list<int> li = { 7, 5, 6, 2, 38, 22, 34 };
-std::forward_list<int> li2 = { 5, 6,7, 2, 3, 2, 7, 22, 1, 33 };
+std::forward_list<int> li2 = { 5, 6,7, 2, 2, 3, 2, 7, 22, 1, 33 };
 
 void stdtest()
 {
@@ -35,18 +35,9 @@ int main()
 {
 	try
 	{
-		char c = 'n';
-		while (c == 'n')
-		{
-			test();
-			test();
-			test();
-			test();
-			for (auto& e : l)
-				std::cout << e << " ";
-			std::cout << "\n";
-			std::cin >> c;
-		}
+		l.splice_after(l.before_begin(), l2, l2.before_begin(), l2.end());
+		for (auto& e : l)
+			std::cout << e << " ";
 	}
 	catch (std::exception& e)
 	{

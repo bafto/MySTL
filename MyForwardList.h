@@ -35,6 +35,18 @@ namespace MySTL
 				exception(msg)
 			{}
 		};
+		class bad_iterator : public exception
+		{
+		public:
+			bad_iterator()
+				:
+				exception("Tried to use bad iterator")
+			{}
+			bad_iterator(const char* msg)
+				:
+				exception(msg)
+			{}
+		};
 	private:
 		struct Node
 		{
@@ -352,6 +364,7 @@ namespace MySTL
 
 		iterator insert_after(iterator position, const T& val)
 		{
+			_validateIteratorPtr(position, this);
 			if (position.node == tail)
 				throw out_of_bounds("Tried to insert after the end");
 			position.node->next = new Node(position.node->next, val);
@@ -359,6 +372,7 @@ namespace MySTL
 		}
 		iterator insert_after(iterator position, T&& val)
 		{
+			_validateIteratorPtr(position, this);
 			if (position.node == tail)
 				throw out_of_bounds("Tried to insert after the end");
 			position.node->next = new Node(position.node->next, std::move(val));
@@ -374,6 +388,8 @@ namespace MySTL
 		}
 		iterator insert_after(iterator position, std::initializer_list<T> list)
 		{
+			_validateIteratorPtr(position, this);
+
 			for (auto it = list.begin(), stop = list.end(); it != stop; ++it)
 			{
 				position = insert_after(position, *it);
@@ -383,6 +399,8 @@ namespace MySTL
 		template<class Iter>
 		iterator insert_after(iterator position, Iter firstIt, Iter lastIt)
 		{
+			_validateIteratorPtr(position);
+
 			for (auto it = firstIt, stop = lastIt; it != stop; ++it)
 			{
 				position = insert_after(position, *it);
@@ -415,6 +433,7 @@ namespace MySTL
 
 		iterator erase_after(iterator position)
 		{
+			_validateIteratorPtr(position, this);
 			if (position.node->next == nullptr)
 				throw out_of_bounds("Tried to delete past the end of the list");
 			position.node->next = _safeDelete(position.node->next);
@@ -422,6 +441,11 @@ namespace MySTL
 		}
 		iterator erase_after(iterator firstIt, iterator lastIt)
 		{
+			_validateIteratorPtr(firstIt, this);
+			_validateIteratorPtr(lastIt, this);
+			if (lastIt.node == tail)
+				throw out_of_bounds("Tried to erase_after end iterator");
+
 			iterator test = firstIt;
 			if (++test == lastIt)
 				return lastIt;
@@ -623,13 +647,103 @@ namespace MySTL
 			}
 		}
 		//why is this called splice_after? uh, nvm
-		void splice_after(iterator position, MyForwardList<T>& fwdlst)
+		void splice_after(iterator position, MyForwardList<T>& fwdlst) //in work
 		{
+			_validateIteratorPtr(position, this);
+			if (position.node == tail)
+				throw out_of_bounds("Tried to insert after end of list");
+			if (fwdlst.empty())
+				return;
+			else if (empty())
+			{
+				swap(fwdlst);
+				return;
+			}
 
+			iterator it = fwdlst.before_begin();
+			for(auto stop = fwdlst.end(); it.node->next != stop.node; ++it)
+			{}
+			it.node->next = position.node->next;
+			position.node->next = fwdlst.head->next;
+			fwdlst.head->next = fwdlst.tail;
 		}
 		void splice_after(iterator position, MyForwardList<T>&& fwdlst)
 		{
 			splice_after(position, fwdlst);
+		}
+		void splice_after(iterator position, MyForwardList<T>& fwdlst, iterator from)
+		{
+			_validateIteratorPtr(position, this);
+			_validateIteratorPtr(from, &fwdlst);
+			_validateIteratorRange(from, fwdlst.before_begin(), fwdlst.end());
+
+			iterator it = fwdlst.before_begin();
+			for(; it.node->next != from.node; ++it)
+			{}
+			it.node->next = from.node->next;
+			from.node->next = position.node->next;
+			position.node->next = from.node;
+		}
+		void splice_after(iterator position, MyForwardList<T>&& fwdlst, iterator from)
+		{
+			splice_after(position, fwdlst, from);
+		}
+		void splice_after(iterator position, MyForwardList<T>& fwdlst, iterator firstIt, iterator lastIt)
+		{
+			if (position.node == tail)
+				throw out_of_bounds("Tried to use end iterator");
+			_validateIteratorPtr(position, this);
+			_validateIteratorPtr(firstIt, &fwdlst);
+			_validateIteratorPtr(lastIt, &fwdlst);
+
+			iterator test = firstIt;
+			if (firstIt == lastIt)
+				return;
+			else if (++test == lastIt)
+				return;
+
+			iterator it = firstIt;
+			for(; it.node->next != lastIt.node; ++it)
+			{}
+			it.node->next = position.node->next;
+			position.node->next = firstIt.node->next;
+			firstIt.node->next = lastIt.node;
+		}
+		void splice_after(iterator position, MyForwardList<T>&& fwdlst, iterator firstIt, iterator lastIt)
+		{
+			splice_after(position, fwdlst, firstIt, lastIt);
+		}
+		void unique()
+		{
+			for (auto it = begin(), itt = ++begin(), stop = end(); itt != stop;)
+			{
+				if (it.node->next->data == *it)
+				{
+					it.node->next = _safeDelete(it.node->next);
+					itt.node = it.node->next;
+				}
+				else
+				{
+					++it;
+					++itt;
+				}
+			}
+		}
+		void unique(std::function<bool(const T&, const T&)> Comp)
+		{
+			for (auto it = begin(), itt = ++begin(), stop = end(); itt != stop;)
+			{
+				if (Comp(*itt, *it))
+				{
+					it.node->next = _safeDelete(it.node->next);
+					itt.node = it.node->next;
+				}
+				else
+				{
+					++it;
+					++itt;
+				}
+			}
 		}
 	private:
 		Node* _safeDelete(Node* node)
@@ -648,5 +762,20 @@ namespace MySTL
 				current = next;
 			} while (current != nullptr);
 		}
+		//check if the it points to list
+		void _validateIteratorPtr(iterator& it, MyForwardList<T>* list)
+		{
+			if (it.list != list)
+				throw bad_iterator("Tried to use iterator from wrong list");
+		}
+		//check if iterator is between firstIt and lastIt
+		void _validateIteratorRange(iterator& it, iterator firstIt = before_begin(), iterator lastIt = end())
+		{
+			if (it.list != firstIt.list)
+				throw bad_iterator("Tried to use iterator from wrong list");
+			else if (it == firstIt || it == lastIt)
+				throw out_of_bounds("Tried to use iterator out of bounds");
+		}
+
 	};
 }
