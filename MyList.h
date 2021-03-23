@@ -34,6 +34,18 @@ namespace MySTL
 				exception(message)
 			{}
 		};
+		class bad_iterator : public exception
+		{
+		public:
+			bad_iterator()
+				:
+				exception("Bad iterator")
+			{}
+			bad_iterator(const char* message)
+				:
+				exception(message)
+			{}
+		};
 	private:
 		struct Node
 		{
@@ -324,9 +336,7 @@ namespace MySTL
 		{
 			if (this != &copy)
 			{
-				tail->prev->next = nullptr;
-				_safeDeleteAllChildren(head->next);
-				head->next = tail;
+				clear();
 				v_size = copy.v_size;
 				Node* current = head;
 				for (auto it = copy.cbegin(), stop = copy.cend(); it != stop; ++it)
@@ -344,9 +354,7 @@ namespace MySTL
 		{
 			if (this != &donor)
 			{
-				tail->prev->next = nullptr;
-				_safeDeleteAllChildren(head->next);
-				head->next = tail;
+				clear();
 				v_size = donor.v_size;
 				head = donor.head;
 				tail = donor.tail;
@@ -360,9 +368,7 @@ namespace MySTL
 
 		MyList<T>& operator=(std::initializer_list<T> list) noexcept
 		{
-			tail->prev->next = nullptr;
-			_safeDeleteAllChildren(head->next);
-			head->next = tail;
+			clear();
 			Node* current = head;
 			for (auto it = list.begin(), stop = list.end(); it != stop; ++it)
 			{
@@ -371,7 +377,63 @@ namespace MySTL
 				tail->prev = node;
 				current = node;
 			}
+			v_size = list.size();
 			return *this;
+		}
+
+		void assign(size_t size, const T& val)
+		{
+			clear();
+			Node* current = head;
+			for (size_t i = 0; i < size; ++i)
+			{
+				Node* node = new Node(current, tail, val);
+				current->next = node;
+				tail->prev = node;
+				current = node;
+			}
+			v_size = size;
+		}
+		template<class Iter>
+		void assign(Iter firstIt, Iter lastIt)
+		{
+			clear();
+			Node* current = head;
+			size_t count = 0;
+			for (auto it = firstIt; it != lastIt; ++it)
+			{
+				Node* node = new Node(current, tail, *it);
+				current->next = node;
+				tail->prev = node;
+				current = node;
+				count++;
+			}
+			v_size = count;
+		}
+		void assign(std::initializer_list<T> list)
+		{
+			clear();
+			Node* current = head;
+			for (auto it = list.begin(), stop = list.end(); it != stop; ++it)
+			{
+				Node* node = new Node(current, tail, *it);
+				current->next = node;
+				tail->prev = node;
+				current = node;
+			}
+			v_size = list.size();
+		}
+
+		void swap(MyList<T>& list)
+		{
+			Node* tempHead = head;
+			Node* tempTail = tail;
+
+			head = list.head;
+			tail = list.tail;
+
+			list.head = tempHead;
+			list.tail = tempTail;
 		}
 
 		size_t size() const
@@ -385,6 +447,42 @@ namespace MySTL
 		bool empty() const
 		{
 			return v_size == 0;
+		}
+
+		void resize(size_t size, const T& val = T())
+		{
+			if (v_size == size)
+				return;
+			else if (v_size > size)
+			{
+				iterator it = begin();
+				for (size_t i = 0; i < size; i++, ++it)
+				{}
+				Node* toDelete = it.node;
+				it.node->prev->next = tail;
+				tail->prev->next = nullptr;
+				tail->prev = it.node->prev;
+				_safeDeleteAllChildren(toDelete);
+				v_size = size;
+			}
+			else if (v_size < size)
+			{
+				for (size_t i = v_size; i < size; i++)
+				{
+					Node* node = new Node(tail->prev, tail, val);
+					tail->prev->next = node;
+					tail->prev = node;
+				}
+				v_size = size;
+			}
+		}
+
+		void clear()
+		{
+			tail->prev->next = nullptr;
+			_safeDeleteAllChildren(head->next);
+			head->next = tail;
+			v_size = 0;
 		}
 
 		T& front()
@@ -445,22 +543,147 @@ namespace MySTL
 			return const_reverse_iterator(this, head);
 		}
 
+		iterator insert(iterator position, const T& val)
+		{
+			_validateIterator(position);
+			Node* old = position.node;
+			Node* node = new Node(old->prev, old, val);
+			old->prev->next = node;
+			old->prev = node;
+			v_size++;
+			return iterator(this, node);
+		}
+		iterator insert(iterator position, T&& val)
+		{
+			_validateIterator(position);
+			Node* old = position.node;
+			Node* node = new Node(old->prev, old, std::move(val));
+			old->prev->next = node;
+			old->prev = node;
+			v_size++;
+			return iterator(this, node);
+		}
+		iterator insert(iterator position, size_t count, const T& val)
+		{
+			_validateIterator(position);
+			for (size_t i = 0; i < count; i++)
+			{
+				position = insert(position, val);
+			}
+			v_size += count;
+			return position;
+		}
+		iterator insert(iterator position, std::initializer_list<T> list)
+		{
+			_validateIterator(position);
+			iterator ret = insert(position, *(list.begin()));
+			for (auto it = list.begin() + 1, stop = list.end(); it != stop; ++it)
+			{
+				insert(position, *it);
+			}
+			v_size += list.size();
+			return ret;
+		}
+		template<class Iter>
+		iterator insert(iterator position, Iter firstIt, Iter lastIt)
+		{
+			_validateIterator(position);
+			size_t count = 0;
+			iterator ret = insert(position, *firstIt);;
+			for (auto it = ++firstIt; it != lastIt; ++it)
+			{
+				insert(position, *it);
+				count++;
+			}
+			v_size += count;
+			return ret;
+		}
+
+		template<typename... args>
+		iterator emplace(iterator position, args&&... vals)
+		{
+			return insert(position, T(std::move(vals...)));
+		}
+		template<typename... args>
+		void emplace_back(args&&... vals)
+		{
+			insert(end(), std::move(vals...));
+		}
+		template<typename... args>
+		void emplace_front(args&&... vals)
+		{
+			insert(begin(), std::move(vals...));
+		}
+
+		void push_back(const T& val)
+		{
+			insert(end(), val);
+		}
+		void push_back(T&& val)
+		{
+			insert(end(), std::move(val));
+		}
+		void push_front(const T& val)
+		{
+			insert(begin(), val);
+		}
+		void push_front(T&& val)
+		{
+			insert(begin(), std::move(val));
+		}
+
+		void pop_back()
+		{
+			_safeDelete(tail->prev);
+		}
+		void pop_front()
+		{
+			_safeDelete(head->next);
+		}
+
+		void erase(iterator position)
+		{
+			if (position.node == head || position.node == tail)
+				throw out_of_bounds("Tried to delete element out of bounds");
+			_validateIterator(position);
+			_safeDelete(position.node);
+		}
+		iterator erase(iterator firstIt, iterator lastIt)
+		{
+			_validateIterator(firstIt);
+			_validateIterator(lastIt);
+			firstIt.node->prev->next = lastIt.node;
+			lastIt.node->prev->next = nullptr;
+			lastIt.node->prev = firstIt.node->prev;
+			_safeDeleteAllChildren(firstIt.node);
+			return lastIt;
+		}
+
 	private:
 		void _safeDelete(Node* node)
 		{
 			node->prev->next = node->next;
 			node->next->prev = node->prev;
 			delete node;
+			v_size--;
 		}
 		void _safeDeleteAllChildren(Node* node) //until now leaves the parents next and the childs prev dangling
 		{
+			size_t count = 0;
 			while (node->next != nullptr)
 			{
 				Node* temp = node->next;
 				node->next = temp->next;
 				delete temp;
+				count++;
 			}
 			delete node;
+			v_size -= ++count;
+		}
+		void _validateIterator(const iterator& it)
+		{
+			if (it.list != this)
+				throw bad_iterator("Tried to pass iterator of other list");
 		}
 	};
 }

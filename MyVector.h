@@ -744,22 +744,17 @@ namespace MySTL
 			}
 		}
 
-		iterator emplace(iterator position)
-		{
-			return position;
-		}
-		template<typename arg, typename... args>
-		iterator emplace(iterator position, arg&& val, args&&... vals)
-		{
-			insert(position, std::move(val));
-			emplace(position + 1, vals...);
-			return position;
-		}
 		template<typename... args>
 		T& emplace_back(args&&... vals)
 		{
-			return *emplace(end(), vals...);
+			return *emplace(end(), std::move(vals...));
 		}
+		template<typename... args>
+		iterator emplace(iterator position, args&&... vals)
+		{
+			return insert(position, T(std::move(vals...)));
+		}
+
 
 		void push_back(const T& val)
 		{

@@ -421,13 +421,15 @@ namespace MySTL
 			return position;
 		}
 
-		iterator emplace_after(iterator position, T&& val)
+		template<typename... args>
+		iterator emplace_after(iterator position, args&&... vals)
 		{
-			insert_after(position, val);
+			return insert_after(position, T(vals...));
 		}
-		void emplace_front(T&& val)
+		template<typename... args>
+		void emplace_front(args&&... vals)
 		{
-			head->next = new Node(head->next, std::move(val));
+			head->next = new Node(head->next, std::move(vals...));
 		}
 
 		void push_front(const T& val)

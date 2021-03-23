@@ -19,9 +19,11 @@ int main()
 {
 	try
 	{
-		std::vector<int> vec = { 1, 2, 3, 69, 17, 420 };
-		MySTL::MyList<int> li(vec.begin(), vec.end());
+		std::list<int> slist = { 1, 2, 3, 4, 5 };
+		MySTL::MyList<int> li({ 1, 2 ,3 , 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 });
 		MySTL::MyList<int> li2 = { 18, 73, 44, 55 };
+		size_t i = 0;
+		li.swap(li2);
 		for (auto& e : li)
 			std::cout << e << " ";
 		std::cout << "\n";
