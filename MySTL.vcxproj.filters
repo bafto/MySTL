@@ -26,5 +26,8 @@
     <ClInclude Include="MyForwardList.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="MyList.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

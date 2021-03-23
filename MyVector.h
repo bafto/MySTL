@@ -412,6 +412,19 @@ namespace MySTL
 			donor.data = nullptr;
 		}
 
+		template<class Iter>
+		MyVector(Iter firstIt, Iter lastIt)
+			:
+			v_size(lastIt - firstIt),
+			v_capacity(lastIt - firstIt)
+		{
+			data = new T[v_capacity];
+			int i = 0;
+			for (auto it = firstIt; it != lastIt; ++it, i++)
+			{
+				data[i] = *it;
+			}
+		}
 		MyVector(std::initializer_list<T> list)
 			:
 			v_size(list.size()),

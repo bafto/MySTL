@@ -16,7 +16,7 @@ namespace MySTL
 		public:
 			exception()
 				:
-				exception("Vector exception")
+				exception("ForwardList exception")
 			{}
 			exception(const char* message)
 				:
@@ -66,7 +66,7 @@ namespace MySTL
 			using reference = T&;
 			using pointer = T*;
 			using difference_type = std::ptrdiff_t;
-			using iterator_category = std::random_access_iterator_tag;
+			using iterator_category = std::forward_iterator_tag;
 		private:
 			class bad_iterator_compare : public exception
 			{
@@ -94,14 +94,14 @@ namespace MySTL
 		public:
 			reference operator*() const
 			{
-				if (node == list->head)
-					throw out_of_bounds("Tried to dereference element before the beginning of the list");
+				if (node == list->head || node == list->tail)
+					throw out_of_bounds("Tried to dereference invalid element");
 				return node->data;
 			}
 			pointer operator->() const
 			{
-				if (node == list->head)
-					throw out_of_bounds("Tried to access element before the beginning of the list");
+				if (node == list->head || node == list->tail)
+					throw out_of_bounds("Tried to access invalid element");
 				return &node->data;
 			}
 
@@ -112,9 +112,11 @@ namespace MySTL
 				node = node->next;
 				return *this;
 			}
-			iterator& operator++(int)
+			iterator operator++(int)
 			{
 				iterator result(*this);
+				if (node == list->tail)
+					throw out_of_bounds("Tried to advance iterator past the end of the list");
 				node = node->next;
 				return result;
 			}
@@ -185,6 +187,17 @@ namespace MySTL
 			_safeDeleteAllChildren(head);
 		}
 
+		template<class Iter>
+		MyForwardList(Iter firstIt, Iter lastIt)
+		{
+			tail = new Node(nullptr);
+			head = new Node(tail);
+			iterator mIt = before_begin();
+			for (auto it = firstIt; it != lastIt; ++it, ++mIt)
+			{
+				mIt.node->next = new Node(tail, *it);
+			}
+		}
 		MyForwardList(std::initializer_list<T> list)
 		{
 			tail = new Node(nullptr);
@@ -195,7 +208,7 @@ namespace MySTL
 				mIt.node->next = new Node(tail, *it);
 			}
 		}
-		MyForwardList(size_t size, const T& val)
+		MyForwardList(size_t size, const T& val = T())
 		{
 			tail = new Node(nullptr);
 			head = new Node(tail);
