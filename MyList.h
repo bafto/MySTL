@@ -659,6 +659,117 @@ namespace MySTL
 			return lastIt;
 		}
 
+		void splice(iterator position, MyList<T>& list)
+		{
+			if (list.empty() || &list == this)
+				return;
+			_validateIterator(position);
+			list.tail->prev->next = position.node;
+			list.head->next->prev = position.node->prev;
+			position.node->prev->next = list.head->next;
+			position.node->prev = list.tail->prev;
+			list.head->next = list.tail;
+			list.tail->prev = list.head;
+			v_size += list.v_size;
+			list.v_size = 0;
+		}
+		void splice(iterator position, MyList<T>&& list)
+		{
+			splice(position, list);
+		}
+		void splice(iterator position, MyList<T>& list, iterator from)
+		{
+			_validateIterator(position);
+			_validateIterator(from, &list);
+			from.node->next->prev = from.node->prev;
+			from.node->prev->next = from.node->next;
+			position.node->prev->next = from.node;
+			from.node->prev = position.node->prev;
+			position.node->prev = from.node;
+			from.node->next = position.node;
+		}
+		void splice(iterator position, MyList<T>&& list, iterator from)
+		{
+			splice(position, list, from);
+		}
+		void splice(iterator position, MyList<T>& list, iterator firstIt, iterator lastIt)
+		{
+			_validateIterator(position);
+			_validateIterator(firstIt, &list);
+			_validateIterator(lastIt, &list);
+			position.node->prev->next = firstIt.node;
+			firstIt.node->prev->next = lastIt.node;
+			firstIt.node->prev = position.node->prev;
+			position.node->prev = lastIt.node->prev;
+			lastIt.node->prev->next = position.node;
+			lastIt.node->prev = firstIt.node->prev;
+		}
+		void splice(iterator position, MyList<T>&& list, iterator firstIt, iterator lastIt)
+		{
+			splice(position, list, firstIt, lastIt);
+		}
+
+		void remove(const T& val)
+		{
+			Node* current = head->next;
+			while( current != tail)
+			{
+				if (current->data == val)
+				{
+					Node* del = current;
+					current = current->next;
+					_safeDelete(del);
+				}
+				else
+					current = current->next;
+			}
+		}
+		void remove_if(std::function<bool(T val)> Comp)
+		{
+			Node* current = head->next;
+			while ( current != tail)
+			{
+				if (Comp(current->data))
+				{
+					Node* del = current;
+					current = current->next;
+					_safeDelete(del);
+				}
+				else
+					current = current->next;
+			}
+		}
+
+		void unique()
+		{
+			Node* current = head->next;
+			while (current != tail)
+			{
+				if (current->next->data == current->data)
+				{
+					_safeDelete(current->next);
+				}
+				else
+				{
+					current = current->next;
+				}
+			}
+		}
+		void unique(std::function<bool(T val)> Comp)
+		{
+			Node* current = head->next;
+			while (current != tail)
+			{
+				if (Comp(current->next->data, current->data))
+				{
+					_safeDelete(current->next);
+				}
+				else
+				{
+					current = current->next;
+				}
+			}
+		}
 	private:
 		void _safeDelete(Node* node)
 		{
@@ -684,6 +795,11 @@ namespace MySTL
 		{
 			if (it.list != this)
 				throw bad_iterator("Tried to pass iterator of other list");
+		}
+		void _validateIterator(const iterator& it, MyList<T>* list)
+		{
+			if (it.list != list)
+				throw bad_iterator("Tried to pass iterator from wrong list");
 		}
 	};
 }
