@@ -679,6 +679,8 @@ namespace MySTL
 		}
 		void splice(iterator position, MyList<T>& list, iterator from)
 		{
+			if (list.empty() || &list == this)
+				return;
 			_validateIterator(position);
 			_validateIterator(from, &list);
 			from.node->next->prev = from.node->prev;
@@ -694,6 +696,8 @@ namespace MySTL
 		}
 		void splice(iterator position, MyList<T>& list, iterator firstIt, iterator lastIt)
 		{
+			if (list.empty() || &list == this)
+				return;
 			_validateIterator(position);
 			_validateIterator(firstIt, &list);
 			_validateIterator(lastIt, &list);
@@ -770,6 +774,199 @@ namespace MySTL
 				}
 			}
 		}
+
+		void sort()
+		{
+			if (empty())
+				return;
+			for (Node* current = head; current->next != tail; current = current->next)
+			{
+				for (Node* index = current->next; index != tail; index = index->next)
+				{
+					if (current->data > index->data)
+					{
+						T temp = current->data;
+						current->data = index->data;
+						index->data = temp;
+					}
+				}
+			}
+		}
+		void sort(std::function<bool(T x, T y)> Comp)
+		{
+			if (empty())
+				return;
+			for (Node* current = head; current->next != tail; current = current->next)
+			{
+				for (Node* index = current->next; index != tail; index = index->next)
+				{
+					if (!Comp(current->data > index->data))
+					{
+						T temp = current->data;
+						current->data = index->data;
+						index->data = temp;
+					}
+				}
+			}
+		}
+
+		void merge(MyList<T>& list)
+		{
+			if (list.empty() || &list == this)
+				return;
+			if (empty() && !list.empty())
+			{
+				swap(list);
+				return;
+			}
+			sort();
+			list.sort();
+
+			Node* newHead = nullptr;
+			Node* head1 = head->next;
+			Node* head2 = list.head->next;
+
+			if (head1->data <= head2->data)
+			{
+				newHead = head1;
+				head1 = head1->next;
+			}
+			else
+			{
+				newHead = head2;
+				head2 = head2->next;
+			}
+
+			Node* newTail = newHead;
+
+			while (head1 != tail && head2 != list.tail)
+			{
+				if (head1->data <= head2->data)
+				{
+					head1 = _safeAttachNode(newTail, head1);
+				}
+				else
+				{
+					head2 = _safeAttachNode(newTail, head2);
+				}
+				newTail = newTail->next;
+			}
+
+			if (head1 != tail)
+			{
+				while (head1 != tail)
+				{
+					head1 = _safeAttachNode(newTail, head1);
+					newTail = newTail->next;
+				}
+			}
+			else if (head2 != list.tail)
+			{
+				while (head2 != list.tail)
+				{
+					head2 = _safeAttachNode(newTail, head2);
+					newTail = newTail->next;
+				}
+			}
+
+			head->next = newHead;
+			tail->prev = newTail;
+			list.head->next = list.tail;
+			list.tail->prev = list.head;
+			v_size += list.v_size;
+			list.v_size = 0;
+		}
+		void merge(MyList<T>&& list)
+		{
+			merge(list);
+		}
+		void merge(MyList<T>& list, std::function<bool(T, T)> Comp)
+		{
+			if (list.empty() || &list == this)
+				return;
+			if (empty() && !list.empty())
+			{
+				swap(list);
+				return;
+			}
+			sort(Comp);
+			list.sort(Comp);
+
+			Node* newHead = nullptr;
+			Node* head1 = head->next;
+			Node* head2 = list.head->next;
+
+			if (Comp(head1->data, head2->data))
+			{
+				newHead = head1;
+				head1 = head1->next;
+			}
+			else
+			{
+				newHead = head2;
+				head2 = head2->next;
+			}
+
+			Node* newTail = newHead;
+
+			while (head1 != tail && head2 != list.tail)
+			{
+				if (Comp(head1->data, head2->data))
+				{
+					head1 = _safeAttachNode(newTail, head1);
+				}
+				else
+				{
+					head2 = _safeAttachNode(newTail, head2);
+				}
+				newTail = newTail->next;
+			}
+
+			if (head1 != tail)
+			{
+				while (head1 != tail)
+				{
+					head1 = _safeAttachNode(newTail, head1);
+					newTail = newTail->next;
+				}
+			}
+			else if (head2 != list.tail)
+			{
+				while (head2 != list.tail)
+				{
+					head2 = _safeAttachNode(newTail, head2);
+					newTail = newTail->next;
+				}
+			}
+
+			head->next = newHead;
+			tail->prev = newTail;
+			list.head->next = list.tail;
+			list.tail->prev = list.head;
+			v_size += list.v_size;
+			list.v_size = 0;
+		}
+		void merge(MyList<T>&& list, std::function<bool(T, T)> Comp)
+		{
+			merge(list, Comp);
+		}
+
+		void reverse()
+		{
+			Node* node = head;
+			while (node != nullptr)
+			{
+				Node* temp = node->next;
+				node->next = node->prev;
+				node->prev = temp;
+				if (temp == nullptr)
+				{
+					tail = head;
+					head = node;
+				}
+				node = temp;
+			}
+		}
 	private:
 		void _safeDelete(Node* node)
 		{
@@ -790,6 +987,17 @@ namespace MySTL
 			}
 			delete node;
 			v_size -= ++count;
+		}
+		Node* _safeAttachNode(Node* newParent, Node* node) //return the next of the old node
+		{
+			Node* ret = node->next;
+			node->prev->next = node->next;
+			node->next->prev = node->prev;
+			node->prev = newParent;
+			node->next = newParent->next;
+			newParent->next->prev = node;
+			newParent->next = node;
+			return ret;
 		}
 		void _validateIterator(const iterator& it)
 		{
